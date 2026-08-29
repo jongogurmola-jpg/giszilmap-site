@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>GISzilMap — Cleveland</title>
+<link rel="stylesheet" href="lib/maplibre-gl.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="map"></div>
+
+<button id="panel-toggle" title="toggle panel">☰</button>
+<div id="panel">
+  <h1>GISzilMap <span class="sub">Cleveland metro · commute target: NASA Glenn</span></h1>
+
+  <section>
+    <h2>Choropleth</h2>
+    <select id="metric"></select>
+    <div id="legend"></div>
+    <div id="metric-note" class="note"></div>
+  </section>
+
+  <section>
+    <h2>Composite weights</h2>
+    <div id="weights"></div>
+  </section>
+
+  <section>
+    <h2>Overlays</h2>
+    <div id="overlays"></div>
+    <div class="listing-filters">
+      <label>$<input id="pmin" type="number" step="10000" placeholder="min"></label>
+      <label>–&nbsp;$<input id="pmax" type="number" step="10000" placeholder="max"></label>
+      <label>beds ≥ <input id="bmin" type="number" min="0" max="6" style="width:3em"></label>
+      <label>baths ≥ <input id="bamin" type="number" min="0" max="6" step="0.5" style="width:3.4em"></label>
+    </div>
+    <div id="dot-legend" class="note"></div>
+  </section>
+
+  <section class="note" id="caveats">
+    Crime: incident-based inside Cleveland; suburbs use FBI agency-reported
+    annual municipality rates (no suburb publishes incident data). Incident
+    dots exist for Cleveland only. Car times are free-flow (no rush-hour penalty). Religion layer
+    shows congregations, not adherence. Data: US Census 2020 · Ohio School Report
+    Cards 2024-25 · Cleveland Open Data · OSM (© OpenStreetMap contributors, ODbL) ·
+    Redfin/Realtor.com listings.
+  </section>
+</div>
+
+<script src="lib/maplibre-gl.js"></script>
+<script src="lib/pmtiles.js"></script>
+<script src="lib/basemaps.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
