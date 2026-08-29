@@ -27,6 +27,14 @@ select { width: 100%; padding: 5px; font-size: 13px; }
 
 .note { font-size: 11px; color: #898781; margin: 6px 0; line-height: 1.45; }
 
+.dest-label { font-size: 12.5px; color: #0b0b0b; margin: 4px 0 6px; font-weight: 600; }
+.dest-btns { display: flex; gap: 6px; }
+.dest-btns button {
+  font-size: 11.5px; padding: 3px 8px; cursor: pointer;
+  background: #fcfcfb; border: 1px solid rgba(11,11,11,0.25); border-radius: 5px;
+}
+.dest-btns button:hover { background: #f0efec; }
+
 #legend { margin-top: 8px; font-size: 11px; color: #52514e; }
 #legend .bar { display: flex; height: 10px; border-radius: 3px; overflow: hidden; margin-bottom: 2px; }
 #legend .bar div { flex: 1; }

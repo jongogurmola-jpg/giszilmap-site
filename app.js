@@ -79,11 +79,24 @@ map.addControl(new maplibregl.GeolocateControl({ trackUserLocation: true }), "to
 
 let bgData = null;          // blockgroups geojson (for composite + popups)
 const bgIndex = new Map();  // GEOID -> properties
+let bgOrder = null;         // [[geoid, lon, lat], ...] = matrix row/col order
+let destMarker = null;      // commute-destination marker
+let pickingDest = false;
+const baseCommute = new Map();  // GEOID -> baked Glenn values (for reset)
 
 map.on("load", async () => {
   /* block groups (choropleth base) */
   bgData = await (await fetch("tiles/blockgroups.geojson")).json();
-  for (const f of bgData.features) bgIndex.set(f.properties.GEOID, f.properties);
+  for (const f of bgData.features) {
+    const p = f.properties;
+    bgIndex.set(p.GEOID, p);
+    baseCommute.set(p.GEOID, {
+      car_min: p.car_min, transit_min: p.transit_min, bike_min: p.bike_min,
+      s_car: p.s_car, s_transit: p.s_transit, s_bike: p.s_bike,
+    });
+  }
+  bgOrder = await fetch("tiles/bg_order.json")
+    .then(r => r.ok ? r.json() : null).catch(() => null);
   map.addSource("bg", { type: "geojson", data: bgData, promoteId: "GEOID" });
   map.addLayer({
     id: "bg-fill", type: "fill", source: "bg",
@@ -213,15 +226,20 @@ map.on("load", async () => {
     },
   });
 
-  /* NASA Glenn marker */
-  new maplibregl.Marker({ color: "#e34948" }).setLngLat(GLENN)
-    .setPopup(new maplibregl.Popup().setHTML("<b>NASA Glenn Research Center</b>"))
+  /* commute destination marker (defaults to NASA Glenn) */
+  destMarker = new maplibregl.Marker({ color: "#e34948" }).setLngLat(GLENN)
+    .setPopup(new maplibregl.Popup().setHTML("<b>Commute destination</b>"))
     .addTo(map);
 
   buildPanel();
   applyOverlays();
   applyMetric();
   wirePopups();
+
+  const savedDest = HASH.dest !== undefined
+    ? (HASH.dest ? { geoid: HASH.dest } : null)
+    : store.get("dest", null);
+  if (savedDest?.geoid) setDestination(savedDest.geoid, false);
 });
 
 function firstLabelLayer() {
@@ -283,11 +301,20 @@ function buildPanel() {
     odiv.appendChild(row);
   }
 
-  for (const id of ["pmin", "pmax", "bmin", "bamin"]) {
+  for (const id of ["pmin", "pmax", "bmin", "bamin", "age"]) {
     $(id).value = store.get(id, "");
     $(id).onchange = () => { store.set(id, $(id).value); applyListingFilter(); };
   }
   applyListingFilter();
+
+  $("dest-change").onclick = () => {
+    pickingDest = true;
+    map.getCanvas().style.cursor = "crosshair";
+    $("dest-label").textContent = "now click your workplace on the map…";
+    if (matchMedia("(max-width: 640px)").matches)
+      $("panel").classList.add("hidden");
+  };
+  $("dest-reset").onclick = resetDestination;
 
   $("panel-toggle").onclick = () => $("panel").classList.toggle("hidden");
   if (matchMedia("(max-width: 640px)").matches) $("panel").classList.add("hidden");
@@ -309,7 +336,78 @@ function applyListingFilter() {
   if ($("pmax").value) f.push(["<=", ["get", "price"], +$("pmax").value]);
   if ($("bmin").value) f.push([">=", ["coalesce", ["get", "beds"], 0], +$("bmin").value]);
   if ($("bamin").value) f.push([">=", ["coalesce", ["get", "baths"], 0], +$("bamin").value]);
+  const age = $("age").value;  // days on market: n = newer than, o = older than
+  if (age) {
+    const days = +age.slice(1);
+    f.push(age[0] === "n"
+      ? ["<=", ["coalesce", ["get", "days_on_market"], 99999], days]
+      : [">=", ["coalesce", ["get", "days_on_market"], -1], days]);
+  }
   map.setFilter("listings", f.length > 1 ? f : null);
+}
+
+/* ---------- dynamic commute destination ---------- */
+async function fetchRow(mode, idx, n) {
+  const resp = await fetch(`tiles/tt_${mode}.bin`, {
+    headers: { Range: `bytes=${idx * n}-${(idx + 1) * n - 1}` },
+  });
+  if (!resp.ok && resp.status !== 206) throw new Error(`tt_${mode} HTTP ${resp.status}`);
+  const buf = new Uint8Array(await resp.arrayBuffer());
+  return resp.status === 206 ? buf : buf.subarray(idx * n, (idx + 1) * n);
+}
+
+function pctScores(minutes) {
+  // percentile rank, lower minutes = higher score (like p10)
+  const valid = minutes.filter(v => v != null).sort((a, b) => a - b);
+  const m = valid.length;
+  return minutes.map(v => {
+    if (v == null || m < 2) return null;
+    let lo = 0, hi = m;
+    while (lo < hi) { const mid = (lo + hi) >> 1; valid[mid] <= v ? lo = mid + 1 : hi = mid; }
+    return Math.round(1000 * (1 - (lo - 1) / (m - 1))) / 10;
+  });
+}
+
+async function setDestination(geoid, save = true) {
+  if (!bgOrder) return alert("travel-time matrix files not deployed yet");
+  const n = bgOrder.length;
+  const idx = bgOrder.findIndex(e => e[0] === geoid);
+  if (idx < 0) return;
+  $("dest-label").textContent = "loading…";
+  let rows;
+  try {
+    rows = await Promise.all(["car", "transit", "bike"]
+      .map(m => fetchRow(m, idx, n)));
+  } catch (err) {
+    $("dest-label").textContent = "matrix fetch failed";
+    console.error(err);
+    return;
+  }
+  const mins = rows.map(r => Array.from(r, v => v === 255 ? null : v));
+  const scores = mins.map(pctScores);
+  const fields = [["car_min", "s_car"], ["transit_min", "s_transit"],
+                  ["bike_min", "s_bike"]];
+  bgOrder.forEach(([g], i) => {
+    const p = bgIndex.get(g);
+    if (!p) return;
+    fields.forEach(([raw, sc], k) => {
+      p[raw] = mins[k][i];
+      p[sc] = scores[k][i];
+    });
+  });
+  const [, lon, lat] = bgOrder[idx];
+  destMarker.setLngLat([lon, lat]);
+  $("dest-label").textContent = `custom (block group ${geoid})`;
+  if (save) store.set("dest", { geoid });
+  applyMetric();
+}
+
+function resetDestination() {
+  for (const [g, vals] of baseCommute) Object.assign(bgIndex.get(g), vals);
+  destMarker.setLngLat(GLENN);
+  $("dest-label").textContent = "NASA Glenn Research Center";
+  store.set("dest", null);
+  applyMetric();
 }
 
 /* ---------- choropleth ---------- */
@@ -324,7 +422,9 @@ function compositeOf(p) {
 
 function applyMetric() {
   const key = $("metric").value;
-  map.setLayoutProperty("bg-fill", "visibility", key === "none" ? "none" : "visible");
+  // fill stays technically visible at opacity 0 so block groups remain
+  // clickable for the stats popup even with no choropleth selected
+  map.setPaintProperty("bg-fill", "fill-opacity", key === "none" ? 0 : 0.65);
   map.setLayoutProperty("bg-line", "visibility", key === "none" ? "none" : "visible");
   $("metric-note").textContent = NOTES[key] ?? "";
   if (key === "none") { $("legend").innerHTML = ""; return; }
@@ -371,6 +471,14 @@ const fmt = (v, d = 0) => v == null || Number.isNaN(v) ? "—" : (+v).toFixed(d)
 
 function wirePopups() {
   map.on("click", (e) => {
+    if (pickingDest) {
+      pickingDest = false;
+      map.getCanvas().style.cursor = "";
+      const hits = map.queryRenderedFeatures(e.point, { layers: ["bg-fill"] });
+      if (hits.length) setDestination(hits[0].properties.GEOID);
+      else $("dest-label").textContent = "click was outside the metro — try again";
+      return;
+    }
     const pad = 5;
     const box = [[e.point.x - pad, e.point.y - pad], [e.point.x + pad, e.point.y + pad]];
     const tryLayers = (ids) => map.queryRenderedFeatures(box, { layers: ids.filter(l => map.getLayer(l)) });
@@ -385,7 +493,7 @@ function wirePopups() {
         .addTo(map);
     }
     feats = tryLayers(["bg-fill"]);
-    if (feats.length && map.getLayoutProperty("bg-fill", "visibility") !== "none")
+    if (feats.length)
       return popupScorecard(e.lngLat, bgIndex.get(feats[0].properties.GEOID));
   });
   for (const id of ["listings", "amenities", "worship", "bg-fill"])
@@ -413,9 +521,9 @@ function popupScorecard(lngLat, p) {
     <h3>Block group ${p.GEOID} · <b>${comp != null ? fmt(comp) + "/100" : "—"}</b></h3>
     <table>
       <tr><td></td><td class="num"><b>value</b></td><td class="num score"><b>pct</b></td></tr>
-      ${row("Car to Glenn", fmt(p.car_min) + " min", p.s_car)}
-      ${row("Transit to Glenn", fmt(p.transit_min) + " min", p.s_transit)}
-      ${row("Bike to Glenn", fmt(p.bike_min) + " min", p.s_bike)}
+      ${row("Car commute", fmt(p.car_min) + " min", p.s_car)}
+      ${row("Transit commute", fmt(p.transit_min) + " min", p.s_transit)}
+      ${row("Bike commute", fmt(p.bike_min) + " min", p.s_bike)}
       ${row("Crime rate" + (p.crime_src === "agency" ? " (municipal)" : ""),
             p.crime_rate != null ? fmt(p.crime_rate, 1) + "/1k" : "no data", p.s_crime)}
       ${row("Schools (" + (p.district ?? "—") + ")", fmt(p.school_pi, 1) + "% PI, " + fmt(p.school_stars, 1) + "★", p.s_school)}

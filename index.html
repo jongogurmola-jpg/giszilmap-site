@@ -12,7 +12,18 @@
 
 <button id="panel-toggle" title="toggle panel">☰</button>
 <div id="panel">
-  <h1>GISzilMap <span class="sub">Cleveland metro · commute target: NASA Glenn</span></h1>
+  <h1>GISzilMap <span class="sub">Cleveland metro house-hunting map</span></h1>
+
+  <section>
+    <h2>Commute destination</h2>
+    <div id="dest-label" class="dest-label">NASA Glenn Research Center</div>
+    <div class="dest-btns">
+      <button id="dest-change">change — click the map</button>
+      <button id="dest-reset">reset to Glenn</button>
+    </div>
+    <div class="note">Custom destinations use block-group-to-block-group
+      times (transit: 07:45 weekday departure).</div>
+  </section>
 
   <section>
     <h2>Choropleth</h2>
@@ -34,6 +45,19 @@
       <label>–&nbsp;$<input id="pmax" type="number" step="10000" placeholder="max"></label>
       <label>beds ≥ <input id="bmin" type="number" min="0" max="6" style="width:3em"></label>
       <label>baths ≥ <input id="bamin" type="number" min="0" max="6" step="0.5" style="width:3.4em"></label>
+      <label>age <select id="age">
+        <option value="">any</option>
+        <option value="n1">newer than 1 day</option>
+        <option value="n3">newer than 3 days</option>
+        <option value="n7">newer than 1 week</option>
+        <option value="n14">newer than 2 weeks</option>
+        <option value="n30">newer than 30 days</option>
+        <option value="o7">older than 1 week</option>
+        <option value="o30">older than 30 days</option>
+        <option value="o60">older than 60 days</option>
+        <option value="o90">older than 90 days</option>
+        <option value="o180">older than 6 months</option>
+      </select></label>
     </div>
     <div id="dot-legend" class="note"></div>
   </section>
