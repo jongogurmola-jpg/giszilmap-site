@@ -13,6 +13,8 @@ const DOT_COLORS = {
   asian: "#e34948", multi: "#e87ba4", other: "#4a3aa7",
 };
 const LISTING_COLOR = "#4a3aa7";
+const PENDING_COLOR = "#eb6834";   // contingent / under contract
+const SOLD_COLOR = "#52514e";
 const CRIME_COLORS = { violent: "#d03b3b", property: "#898781" };
 
 /* ---------- metric registry ---------- */
@@ -46,6 +48,7 @@ const NOTES = {
 /* ---------- overlays ---------- */
 const OVERLAYS = [
   { id: "listings",  label: "Listings",           color: LISTING_COLOR, on: true },
+  { id: "sold",      label: "Recently sold",      color: SOLD_COLOR, on: false },
   { id: "racedots",  label: "Racial dot map",     color: DOT_COLORS.white, on: false },
   { id: "crimepts",  label: "Crime incidents",    color: CRIME_COLORS.violent, on: false },
   { id: "amenities", label: "Cafés/bars/dining",  color: "#eb6834", on: false },
@@ -224,10 +227,21 @@ map.on("load", async () => {
     id: "listings", type: "circle", source: "listings",
     paint: {
       "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 2.5, 12, 5, 15, 8],
-      "circle-color": LISTING_COLOR,
+      "circle-color": ["match", ["get", "status"],
+        "contingent", PENDING_COLOR, "pending", PENDING_COLOR, LISTING_COLOR],
       "circle-stroke-color": "#fcfcfb", "circle-stroke-width": 1.2,
     },
   });
+
+  map.addSource("sold", { type: "geojson", data: "tiles/sold.geojson" });
+  map.addLayer({
+    id: "sold", type: "circle", source: "sold",
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 2, 12, 4, 15, 7],
+      "circle-color": SOLD_COLOR, "circle-opacity": 0.8,
+      "circle-stroke-color": "#fcfcfb", "circle-stroke-width": 1,
+    },
+  }, "listings");
 
   /* commute destination marker (defaults to NASA Glenn) */
   destMarker = new maplibregl.Marker({ color: "#e34948" }).setLngLat(GLENN)
@@ -304,9 +318,9 @@ function buildPanel() {
     odiv.appendChild(row);
   }
 
-  for (const id of ["pmin", "pmax", "bmin", "bamin", "age"]) {
-    $(id).value = store.get(id, "");
-    $(id).onchange = () => { store.set(id, $(id).value); applyListingFilter(); };
+  for (const id of ["pmin", "pmax", "bmin", "bamin", "age", "lstatus", "soldwin"]) {
+    $(id).value = HASH[id] ?? store.get(id, "");
+    $(id).onchange = () => { store.set(id, $(id).value); applyListingFilter(); legendDots(); };
   }
   applyListingFilter();
 
@@ -335,6 +349,10 @@ function applyOverlays() {
 function applyListingFilter() {
   if (!map.getLayer("listings")) return;
   const f = ["all"];
+  const st = $("lstatus").value;
+  if (st === "active") f.push(["==", ["coalesce", ["get", "status"], "active"], "active"]);
+  if (st === "pending") f.push(["!=", ["coalesce", ["get", "status"], "active"], "active"]);
+
   if ($("pmin").value) f.push([">=", ["get", "price"], +$("pmin").value]);
   if ($("pmax").value) f.push(["<=", ["get", "price"], +$("pmax").value]);
   if ($("bmin").value) f.push([">=", ["coalesce", ["get", "beds"], 0], +$("bmin").value]);
@@ -347,6 +365,13 @@ function applyListingFilter() {
       : [">=", ["coalesce", ["get", "days_on_market"], -1], days]);
   }
   map.setFilter("listings", f.length > 1 ? f : null);
+  if (map.getLayer("sold")) {
+    // same price/beds/baths constraints, plus the sold-within horizon
+    const g = f.filter(x => { const j = JSON.stringify(x);
+      return !(j.includes('"status"') || j.includes('"days_on_market"')); });
+    g.push(["<=", ["coalesce", ["get", "days_since_sold"], 999], +$("soldwin").value]);
+    map.setFilter("sold", g);
+  }
 }
 
 /* ---------- dynamic commute destination ---------- */
@@ -460,6 +485,11 @@ function legendRamp(key) {
 
 function legendDots() {
   const parts = [];
+  if (OVERLAYS.find(o => o.id === "listings").on && $("lstatus").value !== "active")
+    parts.push(`<span><i style="background:${LISTING_COLOR}"></i>active</span>`,
+               `<span><i style="background:${PENDING_COLOR}"></i>contingent/pending</span>`);
+  if (OVERLAYS.find(o => o.id === "sold").on)
+    parts.push(`<span><i style="background:${SOLD_COLOR}"></i>sold</span>`);
   if (OVERLAYS.find(o => o.id === "racedots").on)
     for (const [k, c] of Object.entries(DOT_COLORS))
       parts.push(`<span><i style="background:${c}"></i>${k}</span>`);
@@ -486,7 +516,7 @@ function wirePopups() {
     const box = [[e.point.x - pad, e.point.y - pad], [e.point.x + pad, e.point.y + pad]];
     const tryLayers = (ids) => map.queryRenderedFeatures(box, { layers: ids.filter(l => map.getLayer(l)) });
 
-    let feats = tryLayers(["listings"]);
+    let feats = tryLayers(["listings", "sold"]);
     if (feats.length) return popupListing(e.lngLat, feats[0].properties);
     feats = tryLayers(["grocery", "amenities", "worship"]);
     if (feats.length) {
@@ -499,18 +529,22 @@ function wirePopups() {
     if (feats.length)
       return popupScorecard(e.lngLat, bgIndex.get(feats[0].properties.GEOID));
   });
-  for (const id of ["listings", "amenities", "worship", "bg-fill"])
+  for (const id of ["listings", "sold", "grocery", "amenities", "worship", "bg-fill"])
     map.on("mouseenter", id, () => map.getCanvas().style.cursor = "pointer");
 }
 
 function popupListing(lngLat, p) {
   const price = p.price ? "$" + (+p.price).toLocaleString() : "—";
+  const badge = p.status === "sold"
+    ? `<span style="color:${SOLD_COLOR}">SOLD ${p.sold_date ?? ""}</span> · `
+    : (p.status && p.status !== "active")
+      ? `<span style="color:${PENDING_COLOR}">${p.status.toUpperCase()}</span> · ` : "";
   new maplibregl.Popup({ maxWidth: "300px" }).setLngLat(lngLat).setHTML(`
-    <h3>${price} · ${p.address ?? ""}</h3>
+    <h3>${badge}${price} · ${p.address ?? ""}</h3>
     ${p.city ?? ""} ${p.zip ?? ""}<br>
     ${fmt(p.beds)} bd · ${fmt(p.baths)} ba · ${p.sqft ? (+p.sqft).toLocaleString() + " sqft" : "—"}
     · ${p.ptype ?? ""}<br>
-    built ${p.year_built ?? "—"} · ${fmt(p.days_on_market)} days on market<br>
+    built ${p.year_built ?? "—"} · ${p.status === "sold" ? fmt(p.days_since_sold) + " days ago" : fmt(p.days_on_market) + " days on market"}<br>
     <a href="${p.url}" target="_blank" rel="noopener">listing ↗ (${p.source})</a>
   `).addTo(map);
 }

@@ -45,6 +45,11 @@
       <label>–&nbsp;$<input id="pmax" type="number" step="10000" placeholder="max"></label>
       <label>beds ≥ <input id="bmin" type="number" min="0" max="6" style="width:3em"></label>
       <label>baths ≥ <input id="bamin" type="number" min="0" max="6" step="0.5" style="width:3.4em"></label>
+      <label>status <select id="lstatus">
+        <option value="active">active only</option>
+        <option value="all">active + contingent</option>
+        <option value="pending">contingent/pending only</option>
+      </select></label>
       <label>age <select id="age">
         <option value="">any</option>
         <option value="n1">newer than 1 day</option>
@@ -57,6 +62,11 @@
         <option value="o60">older than 60 days</option>
         <option value="o90">older than 90 days</option>
         <option value="o180">older than 6 months</option>
+      </select></label>
+      <label>sold within <select id="soldwin">
+        <option value="30">30 days</option>
+        <option value="60">60 days</option>
+        <option value="90" selected>90 days</option>
       </select></label>
     </div>
     <div id="dot-legend" class="note"></div>
