@@ -539,8 +539,12 @@ function popupListing(lngLat, p) {
     ? `<span style="color:${SOLD_COLOR}">SOLD ${p.sold_date ?? ""}</span> · `
     : (p.status && p.status !== "active")
       ? `<span style="color:${PENDING_COLOR}">${p.status.toUpperCase()}</span> · ` : "";
+  const photo = p.photo
+    ? `<img src="${p.photo}" loading="lazy" alt="" referrerpolicy="no-referrer"
+         style="width:100%;max-height:180px;object-fit:cover;border-radius:5px;margin-bottom:6px"
+         onerror="this.remove()">` : "";
   new maplibregl.Popup({ maxWidth: "300px" }).setLngLat(lngLat).setHTML(`
-    <h3>${badge}${price} · ${p.address ?? ""}</h3>
+    ${photo}<h3>${badge}${price} · ${p.address ?? ""}</h3>
     ${p.city ?? ""} ${p.zip ?? ""}<br>
     ${fmt(p.beds)} bd · ${fmt(p.baths)} ba · ${p.sqft ? (+p.sqft).toLocaleString() + " sqft" : "—"}
     · ${p.ptype ?? ""}<br>
