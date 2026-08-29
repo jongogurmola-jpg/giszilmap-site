@@ -76,6 +76,9 @@ const map = new maplibregl.Map({
 });
 map.addControl(new maplibregl.NavigationControl(), "top-right");
 map.addControl(new maplibregl.GeolocateControl({ trackUserLocation: true }), "top-right");
+// dynamic scale bars (resize with zoom): miles on top, km beneath
+map.addControl(new maplibregl.ScaleControl({ maxWidth: 140, unit: "metric" }), "bottom-right");
+map.addControl(new maplibregl.ScaleControl({ maxWidth: 140, unit: "imperial" }), "bottom-right");
 
 let bgData = null;          // blockgroups geojson (for composite + popups)
 const bgIndex = new Map();  // GEOID -> properties

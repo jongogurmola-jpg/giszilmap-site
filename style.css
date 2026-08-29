@@ -68,3 +68,8 @@ select { width: 100%; padding: 5px; font-size: 13px; }
   #panel { width: 280px; }
   #panel-toggle { left: 290px; }
 }
+
+.maplibregl-ctrl-scale {
+  font-size: 11px; color: #0b0b0b; background: rgba(252,252,251,0.75);
+  border-color: #52514e; border-width: 0 2px 2px; margin: 0 10px 2px 0 !important;
+}
