@@ -63,6 +63,8 @@
         <option value="o90">older than 90 days</option>
         <option value="o180">older than 6 months</option>
       </select></label>
+      <label>lot <input id="lmin" type="number" min="0" step="0.1" placeholder="min" style="width:3.6em">
+        –<input id="lmax" type="number" min="0" step="0.1" placeholder="max" style="width:3.6em"> ac</label>
       <label>sold within <select id="soldwin">
         <option value="30">30 days</option>
         <option value="60">60 days</option>
@@ -71,6 +73,8 @@
     </div>
     <div id="dot-legend" class="note"></div>
   </section>
+
+  <div class="note" id="data-stamp"></div>
 
   <section class="note" id="caveats">
     Crime: incident-based inside Cleveland; suburbs use FBI agency-reported

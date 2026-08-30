@@ -248,6 +248,10 @@ map.on("load", async () => {
     .setPopup(new maplibregl.Popup().setHTML("<b>Commute destination</b>"))
     .addTo(map);
 
+  fetch("tiles/meta.json").then(r => r.ok ? r.json() : null).then(m => {
+    if (m) $("data-stamp").textContent =
+      `data as of ${m.updated} · ${m.listings.toLocaleString()} listings · ${m.sold.toLocaleString()} recent sales`;
+  }).catch(() => {});
   buildPanel();
   applyOverlays();
   applyMetric();
@@ -319,7 +323,7 @@ function buildPanel() {
     odiv.appendChild(row);
   }
 
-  for (const id of ["pmin", "pmax", "bmin", "bamin", "age", "lstatus", "soldwin"]) {
+  for (const id of ["pmin", "pmax", "bmin", "bamin", "age", "lstatus", "soldwin", "lmin", "lmax"]) {
     $(id).value = HASH[id] ?? store.get(id, "");
     $(id).onchange = () => { store.set(id, $(id).value); applyListingFilter(); legendDots(); };
   }
@@ -358,6 +362,9 @@ function applyListingFilter() {
   if ($("pmax").value) f.push(["<=", ["get", "price"], +$("pmax").value]);
   if ($("bmin").value) f.push([">=", ["coalesce", ["get", "beds"], 0], +$("bmin").value]);
   if ($("bamin").value) f.push([">=", ["coalesce", ["get", "baths"], 0], +$("bamin").value]);
+  // lot filters exclude listings with unknown lot size (mostly condos)
+  if ($("lmin").value) f.push([">=", ["coalesce", ["get", "lot_sqft"], -1], +$("lmin").value * 43560]);
+  if ($("lmax").value) f.push(["<=", ["coalesce", ["get", "lot_sqft"], 9e9], +$("lmax").value * 43560]);
   const age = $("age").value;  // days on market: n = newer than, o = older than
   if (age) {
     const days = +age.slice(1);
@@ -603,7 +610,7 @@ function popupListing(lngLat, p) {
     ${photo}<h3>${badge}${price} · ${p.address ?? ""}</h3>
     ${p.city ?? ""} ${p.zip ?? ""}<br>
     ${fmt(p.beds)} bd · ${fmt(p.baths)} ba · ${p.sqft ? (+p.sqft).toLocaleString() + " sqft" : "—"}
-    · ${p.ptype ?? ""}<br>
+    ${p.lot_sqft ? " · " + (p.lot_sqft / 43560).toFixed(2) + " ac lot" : ""} · ${p.ptype ?? ""}<br>
     built ${p.year_built ?? "—"} · ${p.status === "sold" ? fmt(p.days_since_sold) + " days ago" : fmt(p.days_on_market) + " days on market"}<br>
     <a href="${p.url}" target="_blank" rel="noopener">listing ↗ (${p.source})</a>
     &nbsp;·&nbsp; <button class="share-btn" onclick="shareListing('${shareId}')">Share ⇪</button>
