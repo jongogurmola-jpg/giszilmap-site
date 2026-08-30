@@ -535,21 +535,29 @@ function wirePopups() {
 
 function popupListing(lngLat, p) {
   const price = p.price ? "$" + (+p.price).toLocaleString() : "—";
+  // neighborhood context: the block group under the house
+  const hit = map.queryRenderedFeatures(map.project(lngLat), { layers: ["bg-fill"] });
+  const bg = hit.length ? bgIndex.get(hit[0].properties.GEOID) : null;
+  const comp = bg ? compositeOf(bg) : null;
+  const hood = bg ? `<div class="hood">Neighborhood score <b>${comp != null ? fmt(comp) + "/100" : "—"}</b>
+      · car ${fmt(bg.car_min)} min · schools ${fmt(bg.school_pi)}% · crime ${bg.crime_rate != null ? fmt(bg.crime_rate, 1) : "n/a"}/1k
+      · grocery ${bg.grocery_walk_min != null ? fmt(bg.grocery_walk_min) + " min walk" : ">45 min"}</div>` : "";
   const badge = p.status === "sold"
     ? `<span style="color:${SOLD_COLOR}">SOLD ${p.sold_date ?? ""}</span> · `
     : (p.status && p.status !== "active")
       ? `<span style="color:${PENDING_COLOR}">${p.status.toUpperCase()}</span> · ` : "";
   const photo = p.photo
     ? `<img src="${p.photo}" loading="lazy" alt="" referrerpolicy="no-referrer"
-         style="width:100%;max-height:180px;object-fit:cover;border-radius:5px;margin-bottom:6px"
+         style="width:100%;max-height:200px;object-fit:cover;border-radius:5px;margin-bottom:6px"
          onerror="this.remove()">` : "";
-  new maplibregl.Popup({ maxWidth: "300px" }).setLngLat(lngLat).setHTML(`
+  new maplibregl.Popup({ maxWidth: "380px" }).setLngLat(lngLat).setHTML(`
     ${photo}<h3>${badge}${price} · ${p.address ?? ""}</h3>
     ${p.city ?? ""} ${p.zip ?? ""}<br>
     ${fmt(p.beds)} bd · ${fmt(p.baths)} ba · ${p.sqft ? (+p.sqft).toLocaleString() + " sqft" : "—"}
     · ${p.ptype ?? ""}<br>
     built ${p.year_built ?? "—"} · ${p.status === "sold" ? fmt(p.days_since_sold) + " days ago" : fmt(p.days_on_market) + " days on market"}<br>
     <a href="${p.url}" target="_blank" rel="noopener">listing ↗ (${p.source})</a>
+    ${hood}
   `).addTo(map);
 }
 
@@ -558,7 +566,7 @@ function popupScorecard(lngLat, p) {
   const comp = compositeOf(p);
   const row = (label, val, score) =>
     `<tr><td>${label}</td><td class="num">${val}</td><td class="num score">${score != null ? fmt(score) : ""}</td></tr>`;
-  new maplibregl.Popup({ maxWidth: "320px" }).setLngLat(lngLat).setHTML(`
+  new maplibregl.Popup({ maxWidth: "380px" }).setLngLat(lngLat).setHTML(`
     <h3>Block group ${p.GEOID} · <b>${comp != null ? fmt(comp) + "/100" : "—"}</b></h3>
     <table>
       <tr><td></td><td class="num"><b>value</b></td><td class="num score"><b>pct</b></td></tr>
