@@ -257,6 +257,7 @@ map.on("load", async () => {
     ? (HASH.dest ? { geoid: HASH.dest } : null)
     : store.get("dest", null);
   if (savedDest?.geoid) setDestination(savedDest.geoid, false);
+  openDeepLink();
 });
 
 function firstLabelLayer() {
@@ -533,8 +534,56 @@ function wirePopups() {
     map.on("mouseenter", id, () => map.getCanvas().style.cursor = "pointer");
 }
 
+const shareCache = new Map();  // id -> {props, lngLat}
+
+function shareText(p, lngLat) {
+  const price = p.price ? "$" + (+p.price).toLocaleString() : "price n/a";
+  const hit = map.queryRenderedFeatures(map.project(lngLat), { layers: ["bg-fill"] });
+  const bg = hit.length ? bgIndex.get(hit[0].properties.GEOID) : null;
+  const comp = bg ? compositeOf(bg) : null;
+  const deep = `${location.origin}${location.pathname}#at=${lngLat.lng.toFixed(5)},${lngLat.lat.toFixed(5)}&p=${encodeURIComponent(p.url ?? "")}`;
+  const lines = [
+    `🏠 ${price} · ${p.address ?? ""}, ${p.city ?? ""}`,
+    `${fmt(p.beds)} bd · ${fmt(p.baths)} ba · ${p.sqft ? (+p.sqft).toLocaleString() + " sqft" : "sqft n/a"} · built ${p.year_built ?? "?"}`
+      + (p.status && p.status !== "active" ? ` · ${p.status.toUpperCase()}` : ""),
+  ];
+  if (bg) lines.push(`Neighborhood ${comp != null ? fmt(comp) + "/100" : "—"} · car ${fmt(bg.car_min)} min · schools ${fmt(bg.school_pi)}% · grocery ${bg.grocery_walk_min != null ? fmt(bg.grocery_walk_min) + " min walk" : ">45 min walk"}`);
+  if (p.url) lines.push(`Listing: ${p.url}`);
+  lines.push(`Map: ${deep}`);
+  return lines.join("\n");
+}
+
+window.shareListing = async (id) => {
+  const it = shareCache.get(id);
+  if (!it) return;
+  const text = shareText(it.props, it.lngLat);
+  if (navigator.share) {
+    try { await navigator.share({ text }); return; } catch (e) { if (e.name === "AbortError") return; }
+  }
+  window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank", "noopener");
+};
+
+async function openDeepLink() {
+  if (!HASH.at) return;
+  const [lng, lat] = HASH.at.split(",").map(Number);
+  if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
+  map.jumpTo({ center: [lng, lat], zoom: 15 });
+  if (!HASH.p) return;
+  const url = decodeURIComponent(HASH.p);
+  for (const file of ["tiles/listings.geojson", "tiles/sold.geojson"]) {
+    const fc = await fetch(file).then(r => r.ok ? r.json() : null).catch(() => null);
+    const f = fc?.features.find(x => x.properties.url === url);
+    if (f) {
+      map.once("idle", () => popupListing({ lng, lat }, f.properties));
+      return;
+    }
+  }
+}
+
 function popupListing(lngLat, p) {
   const price = p.price ? "$" + (+p.price).toLocaleString() : "—";
+  const shareId = String(shareCache.size + 1);
+  shareCache.set(shareId, { props: p, lngLat: { lng: lngLat.lng, lat: lngLat.lat } });
   // neighborhood context: the block group under the house
   const hit = map.queryRenderedFeatures(map.project(lngLat), { layers: ["bg-fill"] });
   const bg = hit.length ? bgIndex.get(hit[0].properties.GEOID) : null;
@@ -557,6 +606,7 @@ function popupListing(lngLat, p) {
     · ${p.ptype ?? ""}<br>
     built ${p.year_built ?? "—"} · ${p.status === "sold" ? fmt(p.days_since_sold) + " days ago" : fmt(p.days_on_market) + " days on market"}<br>
     <a href="${p.url}" target="_blank" rel="noopener">listing ↗ (${p.source})</a>
+    &nbsp;·&nbsp; <button class="share-btn" onclick="shareListing('${shareId}')">Share ⇪</button>
     ${hood}
   `).addTo(map);
 }
