@@ -323,7 +323,7 @@ function buildPanel() {
     odiv.appendChild(row);
   }
 
-  for (const id of ["pmin", "pmax", "bmin", "bamin", "age", "lstatus", "soldwin", "lmin", "lmax"]) {
+  for (const id of ["pmin", "pmax", "bmin", "bamin", "age", "agemode", "lstatus", "soldwin", "lmin", "lmax"]) {
     $(id).value = HASH[id] ?? store.get(id, "");
     $(id).onchange = () => { store.set(id, $(id).value); applyListingFilter(); legendDots(); };
   }
@@ -365,12 +365,15 @@ function applyListingFilter() {
   // lot filters exclude listings with unknown lot size (mostly condos)
   if ($("lmin").value) f.push([">=", ["coalesce", ["get", "lot_sqft"], -1], +$("lmin").value * 43560]);
   if ($("lmax").value) f.push(["<=", ["coalesce", ["get", "lot_sqft"], 9e9], +$("lmax").value * 43560]);
-  const age = $("age").value;  // days on market: n = newer than, o = older than
+  const age = $("age").value;  // n = newer than, o = older than
   if (age) {
     const days = +age.slice(1);
+    // "price change" mode filters on days since the last price change this
+    // tool observed; listings with no observed change are excluded
+    const field = $("agemode").value === "change" ? "days_since_change" : "days_on_market";
     f.push(age[0] === "n"
-      ? ["<=", ["coalesce", ["get", "days_on_market"], 99999], days]
-      : [">=", ["coalesce", ["get", "days_on_market"], -1], days]);
+      ? ["<=", ["coalesce", ["get", field], 99999], days]
+      : [">=", ["coalesce", ["get", field], -1], days]);
   }
   map.setFilter("listings", f.length > 1 ? f : null);
   if (map.getLayer("sold")) {
@@ -611,7 +614,8 @@ function popupListing(lngLat, p) {
     ${p.city ?? ""} ${p.zip ?? ""}<br>
     ${fmt(p.beds)} bd · ${fmt(p.baths)} ba · ${p.sqft ? (+p.sqft).toLocaleString() + " sqft" : "—"}
     ${p.lot_sqft ? " · " + (p.lot_sqft / 43560).toFixed(2) + " ac lot" : ""} · ${p.ptype ?? ""}<br>
-    built ${p.year_built ?? "—"} · ${p.status === "sold" ? fmt(p.days_since_sold) + " days ago" : fmt(p.days_on_market) + " days on market"}<br>
+    built ${p.year_built ?? "—"} · ${p.status === "sold" ? fmt(p.days_since_sold) + " days ago" : fmt(p.days_on_market) + " days on market"}
+    ${p.price_changed ? `<br><b style="color:${p.price_change_pct < 0 ? "#006300" : "#d03b3b"}">${p.price_change_pct < 0 ? "▼" : "▲"} ${Math.abs(p.price_change_pct)}%</b> on ${p.price_changed}` : ""}<br>
     <a href="${p.url}" target="_blank" rel="noopener">listing ↗ (${p.source})</a>
     &nbsp;·&nbsp; <button class="share-btn" onclick="shareListing('${shareId}')">Share ⇪</button>
     ${hood}
