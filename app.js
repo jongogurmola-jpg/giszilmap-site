@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "1788240319";  // replaced with the publish timestamp by publish.sh
+const BUILD = "1788242649";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -33,6 +33,7 @@ const METRICS = {
   s_school:   { label: "School performance",      prop: "school_pi",   unit: "% PI" },
   s_amenity:  { label: "Cafés · bars · dining",   prop: "amenity_1km", unit: " in 1 km" },
   s_grocery:  { label: "Grocery walk",            prop: "grocery_walk_min", unit: " min", invert: true },
+  s_income:   { label: "Median HH income",        prop: "income", unit: "" },
   s_park:     { label: "Park access",             prop: "green_frac_1km", unit: " green frac" },
   s_div_race: { label: "Racial diversity",        prop: "diversity_race", unit: "" },
   s_div_rel:  { label: "Religious diversity",     prop: "diversity_religion", unit: "" },
@@ -40,12 +41,14 @@ const METRICS = {
 const WEIGHT_DEFAULTS = {
   s_car: 8, s_transit: 2, s_bike: 2, s_crime: 6, s_school: 6,
   s_amenity: 4, s_grocery: 3, s_park: 4, s_div_race: 2, s_div_rel: 1,
+  s_income: 0,
 };
 const NOTES = {
   s_crime: "Cleveland: incident-based per block group. Suburbs: FBI agency-reported annual rate, uniform across each municipality.",
   s_car: "Free-flow drive time — no rush-hour penalty.",
   s_transit: "GCRTA/Laketran/Akron METRO, weekday 07:30–08:30 median.",
   s_div_rel: "Congregation mix within 2 km (OSM), not adherence.",
+  s_income: "ACS 2020\u20132024 median household income per block group (margins of error are large at this scale \u2014 read relatively).",
   s_grocery: "Walk time to nearest major supermarket (Heinen's, Giant Eagle, Whole Foods, Trader Joe's, Marc's, Dave's, Aldi, Meijer, Costco…). Blank = over 45 min on foot.",
 };
 
@@ -55,6 +58,7 @@ const OVERLAYS = [
   { id: "sold",      label: "Recently sold",      color: SOLD_COLOR, on: false },
   { id: "racedots",  label: "Racial dot map",     color: DOT_COLORS.white, on: false },
   { id: "trend",     label: "Ethnicity trend 2000→2020", color: DOT_COLORS.black, on: false },
+  { id: "gent",      label: "Gentrification 2000→now", color: "#eb6834", on: false },
   { id: "crimepts",  label: "Crime incidents",    color: CRIME_COLORS.violent, on: false },
   { id: "amenities", label: "Cafés/bars/dining",  color: "#eb6834", on: false },
   { id: "grocery",   label: "Grocery stores",     color: "#1baf7a", on: false },
@@ -97,7 +101,7 @@ const baseCommute = new Map();  // GEOID -> baked Glenn values (for reset)
 
 map.on("load", async () => {
   /* block groups (choropleth base) */
-  bgData = await (await fetch("tiles/blockgroups.geojson?v=1788240319" + DEVQ)).json();
+  bgData = await (await fetch("tiles/blockgroups.geojson?v=1788242649" + DEVQ)).json();
   for (const f of bgData.features) {
     const p = f.properties;
     bgIndex.set(p.GEOID, p);
@@ -106,7 +110,7 @@ map.on("load", async () => {
       s_car: p.s_car, s_transit: p.s_transit, s_bike: p.s_bike,
     });
   }
-  bgOrder = await fetch("tiles/bg_order.json?v=1788240319" + DEVQ)
+  bgOrder = await fetch("tiles/bg_order.json?v=1788242649" + DEVQ)
     .then(r => r.ok ? r.json() : null).catch(() => null);
   const CATS = ["white", "black", "hispanic", "asian", "multi", "other"];
   for (const f of bgData.features) {
@@ -153,8 +157,26 @@ map.on("load", async () => {
     },
   }, firstLabelLayer());
 
+  map.addLayer({
+    id: "gent", type: "fill", source: "bg",
+    layout: { visibility: "none" },
+    paint: {
+      "fill-color": ["case",
+        ["!", ["to-boolean", ["get", "gentrifying"]]],
+        ["case", ["==", ["coalesce", ["get", "gent_pp"], -1], -1],
+          "rgba(0,0,0,0)", "#9ec5f4"],
+        ["interpolate", ["linear"], ["coalesce", ["get", "gent_pp"], 0],
+          0, "#fde4c8", 50, "#eb6834", 100, "#a33305"],
+      ],
+      "fill-opacity": ["case",
+        ["==", ["coalesce", ["get", "gent_pp"], -1], -1], 0,
+        ["interpolate", ["linear"], ["coalesce", ["get", "gent_pp"], 0],
+          0, 0.25, 100, 0.8]],
+    },
+  }, firstLabelLayer());
+
   /* county outline for orientation */
-  map.addSource("counties", { type: "geojson", data: "tiles/counties.geojson?v=1788240319" + DEVQ });
+  map.addSource("counties", { type: "geojson", data: "tiles/counties.geojson?v=1788242649" + DEVQ });
   map.addLayer({
     id: "county-line", type: "line", source: "counties",
     paint: { "line-color": "#52514e", "line-width": 1, "line-dasharray": [3, 2] },
@@ -187,13 +209,13 @@ map.on("load", async () => {
     },
   }, firstLabelLayer());
 
-  map.addSource("parks", { type: "geojson", data: "tiles/parks.geojson?v=1788240319" + DEVQ });
+  map.addSource("parks", { type: "geojson", data: "tiles/parks.geojson?v=1788242649" + DEVQ });
   map.addLayer({
     id: "parks", type: "fill", source: "parks",
     paint: { "fill-color": "#008300", "fill-opacity": 0.35 },
   }, firstLabelLayer());
 
-  map.addSource("amenities", { type: "geojson", data: "tiles/amenities.geojson?v=1788240319" + DEVQ });
+  map.addSource("amenities", { type: "geojson", data: "tiles/amenities.geojson?v=1788242649" + DEVQ });
   map.addLayer({
     id: "amenities", type: "circle", source: "amenities", minzoom: 11,
     paint: {
@@ -205,7 +227,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("grocery", { type: "geojson", data: "tiles/grocery.geojson?v=1788240319" + DEVQ });
+  map.addSource("grocery", { type: "geojson", data: "tiles/grocery.geojson?v=1788242649" + DEVQ });
   map.addLayer({
     id: "grocery", type: "circle", source: "grocery",
     paint: {
@@ -229,7 +251,7 @@ map.on("load", async () => {
              "text-halo-width": 1.2 },
   });
 
-  map.addSource("worship", { type: "geojson", data: "tiles/worship.geojson?v=1788240319" + DEVQ });
+  map.addSource("worship", { type: "geojson", data: "tiles/worship.geojson?v=1788242649" + DEVQ });
   map.addLayer({
     id: "worship", type: "circle", source: "worship", minzoom: 10,
     paint: {
@@ -241,7 +263,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("districts", { type: "geojson", data: "tiles/school_districts.geojson?v=1788240319" + DEVQ });
+  map.addSource("districts", { type: "geojson", data: "tiles/school_districts.geojson?v=1788242649" + DEVQ });
   map.addLayer({
     id: "districts", type: "line", source: "districts",
     paint: { "line-color": "#52514e", "line-width": 1.2 },
@@ -255,7 +277,7 @@ map.on("load", async () => {
     paint: { "text-color": "#52514e", "text-halo-color": "#fcfcfb", "text-halo-width": 1.2 },
   });
 
-  map.addSource("listings", { type: "geojson", data: "tiles/listings.geojson?v=1788240319" + DEVQ });
+  map.addSource("listings", { type: "geojson", data: "tiles/listings.geojson?v=1788242649" + DEVQ });
   map.addLayer({
     id: "listings", type: "circle", source: "listings",
     paint: {
@@ -266,7 +288,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("sold", { type: "geojson", data: "tiles/sold.geojson?v=1788240319" + DEVQ });
+  map.addSource("sold", { type: "geojson", data: "tiles/sold.geojson?v=1788242649" + DEVQ });
   map.addLayer({
     id: "sold", type: "circle", source: "sold",
     paint: {
@@ -281,7 +303,7 @@ map.on("load", async () => {
     .setPopup(new maplibregl.Popup().setHTML("<b>Commute destination</b>"))
     .addTo(map);
 
-  fetch("tiles/meta.json?v=1788240319" + DEVQ).then(r => r.ok ? r.json() : null).then(m => {
+  fetch("tiles/meta.json?v=1788242649" + DEVQ).then(r => r.ok ? r.json() : null).then(m => {
     if (m) $("data-stamp").textContent =
       `data as of ${m.updated} · ${m.listings.toLocaleString()} listings · ${m.sold.toLocaleString()} recent sales`
       + ` · build ${BUILD} · trend ${window.__trendCount ?? 0} areas`;
@@ -352,7 +374,7 @@ function buildPanel() {
     row.querySelector("input").onchange = (e) => {
       o.on = e.target.checked;
       store.set("overlays", OVERLAYS.filter(x => x.on).map(x => x.id));
-      if (o.id === "trend" && o.on && $("metric").value !== "none") {
+      if ((o.id === "trend" || o.id === "gent") && o.on && $("metric").value !== "none") {
         $("metric").value = "none";   // choropleth would bury the trend tint
         store.set("metric", "none");
         applyMetric();
@@ -550,6 +572,9 @@ function legendDots() {
                `<span><i style="background:${PENDING_COLOR}"></i>contingent/pending</span>`);
   if (OVERLAYS.find(o => o.id === "sold").on)
     parts.push(`<span><i style="background:${SOLD_COLOR}"></i>sold</span>`);
+  if (OVERLAYS.find(o => o.id === "gent").on)
+    parts.push(`<span><i style="background:#eb6834"></i>2000 low-income, real income rising (darker = faster)</span>`,
+               `<span><i style="background:#9ec5f4"></i>2000 low-income, flat/declining</span>`);
   if (OVERLAYS.find(o => o.id === "trend").on) {
     for (const [k, c] of Object.entries(DOT_COLORS))
       parts.push(`<span><i style="background:${c}"></i>${k}</span>`);
@@ -634,7 +659,7 @@ async function openDeepLink() {
   map.jumpTo({ center: [lng, lat], zoom: 15 });
   if (!HASH.p) return;
   const url = decodeURIComponent(HASH.p);
-  for (const file of ["tiles/listings.geojson?v=1788240319" + DEVQ, "tiles/sold.geojson?v=1788240319" + DEVQ]) {
+  for (const file of ["tiles/listings.geojson?v=1788242649" + DEVQ, "tiles/sold.geojson?v=1788242649" + DEVQ]) {
     const fc = await fetch(file).then(r => r.ok ? r.json() : null).catch(() => null);
     const f = fc?.features.find(x => x.properties.url === url);
     if (f) {
@@ -694,12 +719,14 @@ function popupScorecard(lngLat, p) {
       ${row("Amenities ≤1 km", fmt(p.amenity_1km), p.s_amenity)}
       ${row("Grocery walk", p.grocery_walk_min != null ? fmt(p.grocery_walk_min) + " min" : ">45 min", p.s_grocery)}
       ${row("Nearest park", fmt(p.park_dist_m) + " m", p.s_park)}
+      ${row("Median HH income", p.income != null ? "$" + (+p.income).toLocaleString() : "—", p.s_income)}
       ${row("Racial diversity", fmt(p.diversity_race, 2), p.s_div_race)}
       ${row("Religious diversity", fmt(p.diversity_religion, 2), p.s_div_rel)}
     </table>
     <div class="score" style="margin-top:4px">
       ${fmt(p.pct_white)}% w · ${fmt(p.pct_black)}% b · ${fmt(p.pct_hispanic)}% h ·
       ${fmt(p.pct_asian)}% a · pop ${p.pop}
+      ${p.inc2000r != null && p.income != null ? `<br>income (2024$): $${(+p.inc2000r).toLocaleString()} (2000) → $${(+p.income).toLocaleString()} (${p.d_income_pct > 0 ? "+" : ""}${p.d_income_pct}%)${p.gentrifying ? " · <b style=\"color:#a33305\">gentrifying</b>" : ""}` : ""}
       ${p.g_cat ? `<br>2000→2020: ${p.g_cat} +${fmt(p.g_pp, 1)}pp` +
         (() => { let w = null, wv = 0;
           for (const c of ["white","black","hispanic","asian","multi","other"]) {
