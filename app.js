@@ -50,6 +50,7 @@ const OVERLAYS = [
   { id: "listings",  label: "Listings",           color: LISTING_COLOR, on: true },
   { id: "sold",      label: "Recently sold",      color: SOLD_COLOR, on: false },
   { id: "racedots",  label: "Racial dot map",     color: DOT_COLORS.white, on: false },
+  { id: "trend",     label: "Ethnicity trend 2000→2020", color: DOT_COLORS.black, on: false },
   { id: "crimepts",  label: "Crime incidents",    color: CRIME_COLORS.violent, on: false },
   { id: "amenities", label: "Cafés/bars/dining",  color: "#eb6834", on: false },
   { id: "grocery",   label: "Grocery stores",     color: "#1baf7a", on: false },
@@ -103,6 +104,16 @@ map.on("load", async () => {
   }
   bgOrder = await fetch("tiles/bg_order.json")
     .then(r => r.ok ? r.json() : null).catch(() => null);
+  const CATS = ["white", "black", "hispanic", "asian", "multi", "other"];
+  for (const f of bgData.features) {
+    const p = f.properties;
+    let best = null, bv = 0;
+    for (const c of CATS) {
+      const v = p["d_" + c];
+      if (v != null && v > bv) { bv = v; best = c; }
+    }
+    p.g_cat = best; p.g_pp = best ? bv : null;
+  }
   map.addSource("bg", { type: "geojson", data: bgData, promoteId: "GEOID" });
   map.addLayer({
     id: "bg-fill", type: "fill", source: "bg",
@@ -122,6 +133,20 @@ map.on("load", async () => {
     minzoom: 11,
   }, firstLabelLayer());
 
+  map.addLayer({
+    id: "trend", type: "fill", source: "bg",
+    layout: { visibility: "none" },
+    paint: {
+      "fill-color": ["match", ["coalesce", ["get", "g_cat"], "none"],
+        "white", DOT_COLORS.white, "black", DOT_COLORS.black,
+        "hispanic", DOT_COLORS.hispanic, "asian", DOT_COLORS.asian,
+        "multi", DOT_COLORS.multi, "other", DOT_COLORS.other,
+        "rgba(0,0,0,0)"],
+      "fill-opacity": ["interpolate", ["linear"],
+        ["coalesce", ["get", "g_pp"], 0], 0, 0.05, 5, 0.25, 15, 0.55, 35, 0.85],
+    },
+  }, firstLabelLayer());
+
   /* county outline for orientation */
   map.addSource("counties", { type: "geojson", data: "tiles/counties.geojson" });
   map.addLayer({
@@ -130,18 +155,20 @@ map.on("load", async () => {
   });
 
   /* overlays */
-  map.addSource("racedots", { type: "vector", url: "pmtiles://tiles/race_dots.pmtiles" });
-  map.addLayer({
-    id: "racedots", type: "circle", source: "racedots", "source-layer": "dots",
-    paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 0.6, 12, 1.4, 15, 2.6],
-      "circle-opacity": 0.85,
-      "circle-color": ["match", ["get", "c"],
-        "white", DOT_COLORS.white, "black", DOT_COLORS.black,
-        "hispanic", DOT_COLORS.hispanic, "asian", DOT_COLORS.asian,
-        "multi", DOT_COLORS.multi, DOT_COLORS.other],
-    },
-  }, firstLabelLayer());
+  for (const yr of ["2020", "2010", "2000"]) {
+    map.addSource("racedots" + yr, { type: "vector", url: `pmtiles://tiles/race_dots_${yr}.pmtiles` });
+    map.addLayer({
+      id: "racedots" + yr, type: "circle", source: "racedots" + yr, "source-layer": "dots",
+      paint: {
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 0.6, 12, 1.4, 15, 2.6],
+        "circle-opacity": 0.85,
+        "circle-color": ["match", ["get", "c"],
+          "white", DOT_COLORS.white, "black", DOT_COLORS.black,
+          "hispanic", DOT_COLORS.hispanic, "asian", DOT_COLORS.asian,
+          "multi", DOT_COLORS.multi, DOT_COLORS.other],
+      },
+    }, firstLabelLayer());
+  }
 
   map.addSource("crimepts", { type: "vector", url: "pmtiles://tiles/crime.pmtiles" });
   map.addLayer({
@@ -323,6 +350,8 @@ function buildPanel() {
     odiv.appendChild(row);
   }
 
+  $("dotyear").value = HASH.dotyear ?? store.get("dotyear", "2020");
+  $("dotyear").onchange = () => { store.set("dotyear", $("dotyear").value); applyOverlays(); };
   for (const id of ["pmin", "pmax", "bmin", "bamin", "age", "agemode", "lstatus", "soldwin", "lmin", "lmax"]) {
     $(id).value = HASH[id] ?? store.get(id, "");
     $(id).onchange = () => { store.set(id, $(id).value); applyListingFilter(); legendDots(); };
@@ -345,6 +374,13 @@ function buildPanel() {
 function applyOverlays() {
   for (const o of OVERLAYS) {
     const vis = o.on ? "visible" : "none";
+    if (o.id === "racedots") {
+      const yr = $("dotyear").value;
+      for (const y of ["2020", "2010", "2000"])
+        map.setLayoutProperty("racedots" + y, "visibility",
+          o.on && y === yr ? "visible" : "none");
+      continue;
+    }
     for (const id of [o.id, o.id + "-label"])
       if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", vis);
   }
@@ -501,6 +537,11 @@ function legendDots() {
                `<span><i style="background:${PENDING_COLOR}"></i>contingent/pending</span>`);
   if (OVERLAYS.find(o => o.id === "sold").on)
     parts.push(`<span><i style="background:${SOLD_COLOR}"></i>sold</span>`);
+  if (OVERLAYS.find(o => o.id === "trend").on) {
+    for (const [k, c] of Object.entries(DOT_COLORS))
+      parts.push(`<span><i style="background:${c}"></i>${k}</span>`);
+    parts.push(`<span>= group with biggest share gain since 2000; darker = larger gain</span>`);
+  }
   if (OVERLAYS.find(o => o.id === "racedots").on)
     for (const [k, c] of Object.entries(DOT_COLORS))
       parts.push(`<span><i style="background:${c}"></i>${k}</span>`);
@@ -646,6 +687,11 @@ function popupScorecard(lngLat, p) {
     <div class="score" style="margin-top:4px">
       ${fmt(p.pct_white)}% w · ${fmt(p.pct_black)}% b · ${fmt(p.pct_hispanic)}% h ·
       ${fmt(p.pct_asian)}% a · pop ${p.pop}
+      ${p.g_cat ? `<br>2000→2020: ${p.g_cat} +${fmt(p.g_pp, 1)}pp` +
+        (() => { let w = null, wv = 0;
+          for (const c of ["white","black","hispanic","asian","multi","other"]) {
+            const v = p["d_" + c]; if (v != null && v < wv) { wv = v; w = c; } }
+          return w ? `, ${w} ${fmt(wv, 1)}pp` : ""; })() : ""}
     </div>
   `).addTo(map);
 }
