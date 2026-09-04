@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "1788486309";  // replaced with the publish timestamp by publish.sh
+const BUILD = "1788507709";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -59,6 +59,7 @@ const OVERLAYS = [
   { id: "racedots",  label: "Racial dot map",     color: DOT_COLORS.white, on: false },
   { id: "trend",     label: "Ethnicity trend 2000→2020", color: DOT_COLORS.black, on: false },
   { id: "gent",      label: "Gentrification 2000→now", color: "#eb6834", on: false },
+  { id: "crimetrend", label: "Crime change 2000→now", color: "#d03b3b", on: false },
   { id: "crimepts",  label: "Crime incidents",    color: CRIME_COLORS.violent, on: false },
   { id: "amenities", label: "Cafés/bars/dining",  color: "#eb6834", on: false },
   { id: "grocery",   label: "Grocery stores",     color: "#1baf7a", on: false },
@@ -101,7 +102,7 @@ const baseCommute = new Map();  // GEOID -> baked Glenn values (for reset)
 
 map.on("load", async () => {
   /* block groups (choropleth base) */
-  bgData = await (await fetch("tiles/blockgroups.geojson?v=1788486309" + DEVQ)).json();
+  bgData = await (await fetch("tiles/blockgroups.geojson?v=1788507709" + DEVQ)).json();
   for (const f of bgData.features) {
     const p = f.properties;
     bgIndex.set(p.GEOID, p);
@@ -110,7 +111,7 @@ map.on("load", async () => {
       s_car: p.s_car, s_transit: p.s_transit, s_bike: p.s_bike,
     });
   }
-  bgOrder = await fetch("tiles/bg_order.json?v=1788486309" + DEVQ)
+  bgOrder = await fetch("tiles/bg_order.json?v=1788507709" + DEVQ)
     .then(r => r.ok ? r.json() : null).catch(() => null);
   const CATS = ["white", "black", "hispanic", "asian", "multi", "other"];
   for (const f of bgData.features) {
@@ -176,7 +177,7 @@ map.on("load", async () => {
   }, firstLabelLayer());
 
   /* county outline for orientation */
-  map.addSource("counties", { type: "geojson", data: "tiles/counties.geojson?v=1788486309" + DEVQ });
+  map.addSource("counties", { type: "geojson", data: "tiles/counties.geojson?v=1788507709" + DEVQ });
   map.addLayer({
     id: "county-line", type: "line", source: "counties",
     paint: { "line-color": "#52514e", "line-width": 1, "line-dasharray": [3, 2] },
@@ -198,6 +199,28 @@ map.on("load", async () => {
     }, firstLabelLayer());
   }
 
+  map.addSource("crimetrend", { type: "geojson", data: "tiles/crime_trend.geojson?v=1788507709" + DEVQ });
+  map.addLayer({
+    id: "crimetrend", type: "fill", source: "crimetrend",
+    layout: { visibility: "none" },
+    paint: {
+      // diverging: green = rate fell since 2000, red = rose; opacity = magnitude
+      "fill-color": ["case", ["==", ["coalesce", ["get", "d_rate_pct"], -9999], -9999],
+        "rgba(0,0,0,0)",
+        ["interpolate", ["linear"], ["get", "d_rate_pct"],
+          -80, "#0a6b30", -30, "#67b57e", -5, "#dfe8df",
+          5, "#e8c9c2", 40, "#d03b3b", 120, "#7a1010"]],
+      "fill-opacity": ["case", ["==", ["coalesce", ["get", "d_rate_pct"], -9999], -9999], 0,
+        ["interpolate", ["linear"],
+          ["abs", ["get", "d_rate_pct"]], 0, 0.25, 60, 0.75]],
+    },
+  }, firstLabelLayer());
+  map.addLayer({
+    id: "crimetrend-line", type: "line", source: "crimetrend",
+    layout: { visibility: "none" },
+    paint: { "line-color": "rgba(11,11,11,0.25)", "line-width": 0.7 },
+  }, firstLabelLayer());
+
   map.addSource("crimepts", { type: "vector", url: "pmtiles://tiles/crime.pmtiles" });
   map.addLayer({
     id: "crimepts", type: "circle", source: "crimepts", "source-layer": "crime",
@@ -209,13 +232,13 @@ map.on("load", async () => {
     },
   }, firstLabelLayer());
 
-  map.addSource("parks", { type: "geojson", data: "tiles/parks.geojson?v=1788486309" + DEVQ });
+  map.addSource("parks", { type: "geojson", data: "tiles/parks.geojson?v=1788507709" + DEVQ });
   map.addLayer({
     id: "parks", type: "fill", source: "parks",
     paint: { "fill-color": "#008300", "fill-opacity": 0.35 },
   }, firstLabelLayer());
 
-  map.addSource("amenities", { type: "geojson", data: "tiles/amenities.geojson?v=1788486309" + DEVQ });
+  map.addSource("amenities", { type: "geojson", data: "tiles/amenities.geojson?v=1788507709" + DEVQ });
   map.addLayer({
     id: "amenities", type: "circle", source: "amenities", minzoom: 11,
     paint: {
@@ -227,7 +250,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("grocery", { type: "geojson", data: "tiles/grocery.geojson?v=1788486309" + DEVQ });
+  map.addSource("grocery", { type: "geojson", data: "tiles/grocery.geojson?v=1788507709" + DEVQ });
   map.addLayer({
     id: "grocery", type: "circle", source: "grocery",
     paint: {
@@ -251,7 +274,7 @@ map.on("load", async () => {
              "text-halo-width": 1.2 },
   });
 
-  map.addSource("worship", { type: "geojson", data: "tiles/worship.geojson?v=1788486309" + DEVQ });
+  map.addSource("worship", { type: "geojson", data: "tiles/worship.geojson?v=1788507709" + DEVQ });
   map.addLayer({
     id: "worship", type: "circle", source: "worship", minzoom: 10,
     paint: {
@@ -263,7 +286,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("districts", { type: "geojson", data: "tiles/school_districts.geojson?v=1788486309" + DEVQ });
+  map.addSource("districts", { type: "geojson", data: "tiles/school_districts.geojson?v=1788507709" + DEVQ });
   map.addLayer({
     id: "districts", type: "line", source: "districts",
     paint: { "line-color": "#52514e", "line-width": 1.2 },
@@ -277,7 +300,7 @@ map.on("load", async () => {
     paint: { "text-color": "#52514e", "text-halo-color": "#fcfcfb", "text-halo-width": 1.2 },
   });
 
-  map.addSource("listings", { type: "geojson", data: "tiles/listings.geojson?v=1788486309" + DEVQ });
+  map.addSource("listings", { type: "geojson", data: "tiles/listings.geojson?v=1788507709" + DEVQ });
   map.addLayer({
     id: "listings", type: "circle", source: "listings",
     paint: {
@@ -288,7 +311,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("sold", { type: "geojson", data: "tiles/sold.geojson?v=1788486309" + DEVQ });
+  map.addSource("sold", { type: "geojson", data: "tiles/sold.geojson?v=1788507709" + DEVQ });
   map.addLayer({
     id: "sold", type: "circle", source: "sold",
     paint: {
@@ -303,7 +326,7 @@ map.on("load", async () => {
     .setPopup(new maplibregl.Popup().setHTML("<b>Commute destination</b>"))
     .addTo(map);
 
-  fetch("tiles/meta.json?v=1788486309" + DEVQ).then(r => r.ok ? r.json() : null).then(m => {
+  fetch("tiles/meta.json?v=1788507709" + DEVQ).then(r => r.ok ? r.json() : null).then(m => {
     if (m) $("data-stamp").textContent =
       `data as of ${m.updated} · ${m.listings.toLocaleString()} listings · ${m.sold.toLocaleString()} recent sales`
       + ` · build ${BUILD} · trend ${window.__trendCount ?? 0} areas`;
@@ -374,7 +397,7 @@ function buildPanel() {
     row.querySelector("input").onchange = (e) => {
       o.on = e.target.checked;
       store.set("overlays", OVERLAYS.filter(x => x.on).map(x => x.id));
-      if ((o.id === "trend" || o.id === "gent") && o.on && $("metric").value !== "none") {
+      if ((o.id === "trend" || o.id === "gent" || o.id === "crimetrend") && o.on && $("metric").value !== "none") {
         $("metric").value = "none";   // choropleth would bury the trend tint
         store.set("metric", "none");
         applyMetric();
@@ -416,7 +439,7 @@ function applyOverlays() {
           o.on && y === yr ? "visible" : "none");
       continue;
     }
-    for (const id of [o.id, o.id + "-label"])
+    for (const id of [o.id, o.id + "-label", o.id + "-line"])
       if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", vis);
   }
   legendDots();
@@ -572,6 +595,9 @@ function legendDots() {
                `<span><i style="background:${PENDING_COLOR}"></i>contingent/pending</span>`);
   if (OVERLAYS.find(o => o.id === "sold").on)
     parts.push(`<span><i style="background:${SOLD_COLOR}"></i>sold</span>`);
+  if (OVERLAYS.find(o => o.id === "crimetrend").on)
+    parts.push(`<span><i style="background:#67b57e"></i>crime rate fell since 2000</span>`,
+               `<span><i style="background:#d03b3b"></i>rose (darker/stronger = bigger change; FBI agency-reported)</span>`);
   if (OVERLAYS.find(o => o.id === "gent").on)
     parts.push(`<span><i style="background:#eb6834"></i>2000 low-income, real income rising (darker = faster)</span>`,
                `<span><i style="background:#9ec5f4"></i>2000 low-income, flat/declining</span>`);
@@ -614,6 +640,15 @@ function wirePopups() {
       return new maplibregl.Popup().setLngLat(e.lngLat)
         .setHTML(`<b>${p.name ?? p.chain ?? "(unnamed)"}</b><br>${p.chain ?? p.kind ?? p.religion ?? ""} ${p.denomination ?? ""}`)
         .addTo(map);
+    }
+    feats = tryLayers(["crimetrend"]);
+    if (feats.length && map.getLayoutProperty("crimetrend", "visibility") === "visible") {
+      const p = feats[0].properties;
+      return new maplibregl.Popup().setLngLat(e.lngLat).setHTML(
+        `<h3>${p.NAME}</h3>crime rate (weighted, per 1k):<br>` +
+        `2000: ${p.rate2000 ?? "n/a"} · 2010: ${p.rate2010 ?? "n/a"} · now: ${p.rate_now ?? "n/a"}` +
+        (p.d_rate_pct != null ? `<br><b>${p.d_rate_pct > 0 ? "+" : ""}${p.d_rate_pct}% since 2000</b>` : "")
+      ).addTo(map);
     }
     feats = tryLayers(["bg-fill"]);
     if (feats.length)
@@ -659,7 +694,7 @@ async function openDeepLink() {
   map.jumpTo({ center: [lng, lat], zoom: 15 });
   if (!HASH.p) return;
   const url = decodeURIComponent(HASH.p);
-  for (const file of ["tiles/listings.geojson?v=1788486309" + DEVQ, "tiles/sold.geojson?v=1788486309" + DEVQ]) {
+  for (const file of ["tiles/listings.geojson?v=1788507709" + DEVQ, "tiles/sold.geojson?v=1788507709" + DEVQ]) {
     const fc = await fetch(file).then(r => r.ok ? r.json() : null).catch(() => null);
     const f = fc?.features.find(x => x.properties.url === url);
     if (f) {
