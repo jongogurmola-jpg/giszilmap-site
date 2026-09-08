@@ -6,6 +6,15 @@
 {"type":"Feature","properties":{"name":"Bugsy's Speakeasy","city":"Elyria"},"geometry":{"type":"Point","coordinates":[-82.1054066,41.3674107]}},
 {"type":"Feature","properties":{"name":"Gatsby's Pub North","city":"Akron"},"geometry":{"type":"Point","coordinates":[-81.58261,41.0458001]}},
 {"type":"Feature","properties":{"name":"Executive's Den","city":null},"geometry":{"type":"Point","coordinates":[-81.5425614,41.5792131]}},
-{"type":"Feature","properties":{"name":"Lido Lounge","city":null},"geometry":{"type":"Point","coordinates":[-81.7683164,41.470001]}}
+{"type":"Feature","properties":{"name":"Lido Lounge","city":null},"geometry":{"type":"Point","coordinates":[-81.7683164,41.470001]}},
+{"type":"Feature","properties":{"name":"Christie's Cabaret","city":"Cleveland"},"geometry":{"type":"Point","coordinates":[-81.706403371928999,41.496892807702999]}},
+{"type":"Feature","properties":{"name":"Larry Flynt's Hustler Club","city":"Cleveland"},"geometry":{"type":"Point","coordinates":[-81.701648528993005,41.494124903025003]}},
+{"type":"Feature","properties":{"name":"Crazy Horse Cabaret","city":"Cleveland"},"geometry":{"type":"Point","coordinates":[-81.815281799496006,41.418661225454997]}},
+{"type":"Feature","properties":{"name":"Power Cabaret","city":"Cleveland"},"geometry":{"type":"Point","coordinates":[-81.685849694075003,41.506118143180998]}},
+{"type":"Feature","properties":{"name":"Privilege Gentleman's Club","city":"Cleveland"},"geometry":{"type":"Point","coordinates":[-81.777278116418003,41.418487307516997]}},
+{"type":"Feature","properties":{"name":"Peek-a-Boo Club","city":"Cleveland"},"geometry":{"type":"Point","coordinates":[-81.699731772741004,41.469142001782998]}},
+{"type":"Feature","properties":{"name":"Club Paradis","city":"Cleveland"},"geometry":{"type":"Point","coordinates":[-81.697951873671002,41.498719251768001]}},
+{"type":"Feature","properties":{"name":"CW Gentlemen Club","city":"Akron"},"geometry":{"type":"Point","coordinates":[-81.511671771205997,41.061750685751001]}},
+{"type":"Feature","properties":{"name":"Clutch Gentlemen's Club","city":"Akron"},"geometry":{"type":"Point","coordinates":[-81.491758047778006,41.019860110590997]}}
 ]
 }
