@@ -1,0 +1,11 @@
+{
+"type": "FeatureCollection",
+"name": "stripclubs",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{"type":"Feature","properties":{"name":"Bugsy's Speakeasy","city":"Elyria"},"geometry":{"type":"Point","coordinates":[-82.1054066,41.3674107]}},
+{"type":"Feature","properties":{"name":"Gatsby's Pub North","city":"Akron"},"geometry":{"type":"Point","coordinates":[-81.58261,41.0458001]}},
+{"type":"Feature","properties":{"name":"Executive's Den","city":null},"geometry":{"type":"Point","coordinates":[-81.5425614,41.5792131]}},
+{"type":"Feature","properties":{"name":"Lido Lounge","city":null},"geometry":{"type":"Point","coordinates":[-81.7683164,41.470001]}}
+]
+}
