@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "1789318979";  // replaced with the publish timestamp by publish.sh
+const BUILD = "1789319454";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -105,7 +105,7 @@ const baseCommute = new Map();  // GEOID -> baked Glenn values (for reset)
 
 map.on("load", async () => {
   /* block groups (choropleth base) */
-  bgData = await (await fetch("tiles/blockgroups.geojson?v=1789318979" + DEVQ)).json();
+  bgData = await (await fetch("tiles/blockgroups.geojson?v=1789319454" + DEVQ)).json();
   for (const f of bgData.features) {
     const p = f.properties;
     bgIndex.set(p.GEOID, p);
@@ -114,9 +114,9 @@ map.on("load", async () => {
       s_car: p.s_car, s_transit: p.s_transit, s_bike: p.s_bike,
     });
   }
-  bgOrder = await fetch("tiles/bg_order.json?v=1789318979" + DEVQ)
+  bgOrder = await fetch("tiles/bg_order.json?v=1789319454" + DEVQ)
     .then(r => r.ok ? r.json() : null).catch(() => null);
-  taxProfiles = await fetch("tiles/tax_profiles.json?v=1789318979" + DEVQ)
+  taxProfiles = await fetch("tiles/tax_profiles.json?v=1789319454" + DEVQ)
     .then(r => r.ok ? r.json() : null).catch(() => null);
   const CATS = ["white", "black", "hispanic", "asian", "multi", "other"];
   for (const f of bgData.features) {
@@ -182,7 +182,7 @@ map.on("load", async () => {
   }, firstLabelLayer());
 
   /* county outline for orientation */
-  map.addSource("counties", { type: "geojson", data: "tiles/counties.geojson?v=1789318979" + DEVQ });
+  map.addSource("counties", { type: "geojson", data: "tiles/counties.geojson?v=1789319454" + DEVQ });
   map.addLayer({
     id: "county-line", type: "line", source: "counties",
     paint: { "line-color": "#52514e", "line-width": 1, "line-dasharray": [3, 2] },
@@ -204,7 +204,7 @@ map.on("load", async () => {
     }, firstLabelLayer());
   }
 
-  map.addSource("crimetrend", { type: "geojson", data: "tiles/crime_trend.geojson?v=1789318979" + DEVQ });
+  map.addSource("crimetrend", { type: "geojson", data: "tiles/crime_trend.geojson?v=1789319454" + DEVQ });
   map.addLayer({
     id: "crimetrend", type: "fill", source: "crimetrend",
     layout: { visibility: "none" },
@@ -237,13 +237,13 @@ map.on("load", async () => {
     },
   }, firstLabelLayer());
 
-  map.addSource("parks", { type: "geojson", data: "tiles/parks.geojson?v=1789318979" + DEVQ });
+  map.addSource("parks", { type: "geojson", data: "tiles/parks.geojson?v=1789319454" + DEVQ });
   map.addLayer({
     id: "parks", type: "fill", source: "parks",
     paint: { "fill-color": "#008300", "fill-opacity": 0.35 },
   }, firstLabelLayer());
 
-  map.addSource("amenities", { type: "geojson", data: "tiles/amenities.geojson?v=1789318979" + DEVQ });
+  map.addSource("amenities", { type: "geojson", data: "tiles/amenities.geojson?v=1789319454" + DEVQ });
   map.addLayer({
     id: "amenities", type: "circle", source: "amenities", minzoom: 11,
     paint: {
@@ -255,7 +255,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("grocery", { type: "geojson", data: "tiles/grocery.geojson?v=1789318979" + DEVQ });
+  map.addSource("grocery", { type: "geojson", data: "tiles/grocery.geojson?v=1789319454" + DEVQ });
   map.addLayer({
     id: "grocery", type: "circle", source: "grocery",
     paint: {
@@ -279,7 +279,7 @@ map.on("load", async () => {
              "text-halo-width": 1.2 },
   });
 
-  map.addSource("worship", { type: "geojson", data: "tiles/worship.geojson?v=1789318979" + DEVQ });
+  map.addSource("worship", { type: "geojson", data: "tiles/worship.geojson?v=1789319454" + DEVQ });
   map.addLayer({
     id: "worship", type: "circle", source: "worship", minzoom: 10,
     paint: {
@@ -291,7 +291,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("stripclubs", { type: "geojson", data: "tiles/stripclubs.geojson?v=1789318979" + DEVQ });
+  map.addSource("stripclubs", { type: "geojson", data: "tiles/stripclubs.geojson?v=1789319454" + DEVQ });
   map.loadImage("lib/bunny.png").then((img) => {
     if (!map.hasImage("bunny")) map.addImage("bunny", img.data);
     map.addLayer({
@@ -310,7 +310,7 @@ map.on("load", async () => {
     applyOverlays();
   }).catch(() => {});
 
-  map.addSource("districts", { type: "geojson", data: "tiles/school_districts.geojson?v=1789318979" + DEVQ });
+  map.addSource("districts", { type: "geojson", data: "tiles/school_districts.geojson?v=1789319454" + DEVQ });
   map.addLayer({
     id: "districts", type: "line", source: "districts",
     paint: { "line-color": "#52514e", "line-width": 1.2 },
@@ -324,7 +324,7 @@ map.on("load", async () => {
     paint: { "text-color": "#52514e", "text-halo-color": "#fcfcfb", "text-halo-width": 1.2 },
   });
 
-  map.addSource("listings", { type: "geojson", data: "tiles/listings.geojson?v=1789318979" + DEVQ });
+  map.addSource("listings", { type: "geojson", data: "tiles/listings.geojson?v=1789319454" + DEVQ });
   map.addLayer({
     id: "listings", type: "circle", source: "listings",
     paint: {
@@ -335,7 +335,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("sold", { type: "geojson", data: "tiles/sold.geojson?v=1789318979" + DEVQ });
+  map.addSource("sold", { type: "geojson", data: "tiles/sold.geojson?v=1789319454" + DEVQ });
   map.addLayer({
     id: "sold", type: "circle", source: "sold",
     paint: {
@@ -350,7 +350,7 @@ map.on("load", async () => {
     .setPopup(new maplibregl.Popup().setHTML("<b>Commute destination</b>"))
     .addTo(map);
 
-  fetch("tiles/meta.json?v=1789318979" + DEVQ).then(r => r.ok ? r.json() : null).then(m => {
+  fetch("tiles/meta.json?v=1789319454" + DEVQ).then(r => r.ok ? r.json() : null).then(m => {
     if (m) $("data-stamp").textContent =
       `data as of ${m.updated} · ${m.listings.toLocaleString()} listings · ${m.sold.toLocaleString()} recent sales`
       + ` · build ${BUILD} · trend ${window.__trendCount ?? 0} areas`;
@@ -605,6 +605,21 @@ function muniIncomeTax(income, workMuniName, homeMuni) {
   return { total: workTax + residenceOwed, work: workTax, residence: residenceOwed, sameCity: false };
 }
 
+function estimateTax(homeMuni, county, propRate, homeVal) {
+  // reuses the current earner inputs; returns tax components for a residence
+  const S = taxProfiles.state;
+  const inc1 = +$("inc1").value || 0, inc2 = +$("inc2").value || 0;
+  const combined = inc1 + inc2;
+  const state = Math.max(0, combined - S.exempt) * S.rate;
+  const e1 = muniIncomeTax(inc1, $("wfh1").checked ? "" : $("work1").value, homeMuni);
+  const e2 = muniIncomeTax(inc2, $("wfh2").checked ? "" : $("work2").value, homeMuni);
+  const muni = e1.total + e2.total;
+  const prop = (homeVal || 0) * (propRate / 100);
+  return { state, muni, prop, combined, income: state + muni,
+           total: state + muni + prop,
+           sales: taxProfiles.counties[county]?.sales };
+}
+
 function computeTax() {
   if (!taxProfiles || !taxHome) return;
   const M = taxProfiles.munis, S = taxProfiles.state;
@@ -825,7 +840,7 @@ async function openDeepLink() {
   if (hp) setTaxHome(bgIndex.get(hp.GEOID));
   if (!HASH.p) return;
   const url = decodeURIComponent(HASH.p);
-  for (const file of ["tiles/listings.geojson?v=1789318979" + DEVQ, "tiles/sold.geojson?v=1789318979" + DEVQ]) {
+  for (const file of ["tiles/listings.geojson?v=1789319454" + DEVQ, "tiles/sold.geojson?v=1789319454" + DEVQ]) {
     const fc = await fetch(file).then(r => r.ok ? r.json() : null).catch(() => null);
     const f = fc?.features.find(x => x.properties.url === url);
     if (f) {
@@ -846,6 +861,16 @@ function popupListing(lngLat, p) {
   const hood = bg ? `<div class="hood">Neighborhood score <b>${comp != null ? fmt(comp) + "/100" : "—"}</b>
       · car ${fmt(bg.car_min)} min · schools ${fmt(bg.school_pi)}% · crime ${bg.crime_rate != null ? fmt(bg.crime_rate, 1) : "n/a"}/1k
       · grocery ${bg.grocery_walk_min != null ? fmt(bg.grocery_walk_min) + " min walk" : ">45 min"}</div>` : "";
+  let taxLine = "";
+  if (taxProfiles && bg && p.price) {
+    const t = estimateTax(bg.res_muni, bg.county, bg.prop_rate, +p.price);
+    const yr = (n) => "$" + Math.round(n).toLocaleString();
+    taxLine = `<div class="hood tax-pop"><b>Est. total tax here: ${yr(t.total)}/yr</b><br>` +
+      `income ${yr(t.income)} + property ${yr(t.prop)} ` +
+      `(${bg.prop_rate}%${bg.prop_src === "county-median" ? " est." : ""})` +
+      `${t.combined ? " · " + (100 * t.total / t.combined).toFixed(1) + "% of income" : ""}` +
+      `<br><span style="font-size:10.5px">set incomes/workplaces in the Tax burden panel</span></div>`;
+  }
   const badge = p.status === "sold"
     ? `<span style="color:${SOLD_COLOR}">SOLD ${p.sold_date ?? ""}</span> · `
     : (p.status && p.status !== "active")
@@ -864,6 +889,8 @@ function popupListing(lngLat, p) {
     <a href="${p.url}" target="_blank" rel="noopener">listing ↗ (${p.source})</a>
     &nbsp;·&nbsp; <button class="share-btn" onclick="shareListing('${shareId}')">Share ⇪</button>
     ${hood}
+    ${taxLine}
+    ${taxLine}
   `).addTo(map);
 }
 
