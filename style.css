@@ -80,3 +80,16 @@ select { width: 100%; padding: 5px; font-size: 13px; }
 .share-btn { font: inherit; font-size: 12px; padding: 2px 8px; cursor: pointer; color: #fcfcfb;
   background: #25d366; border: 0; border-radius: 4px; }
 .share-btn:hover { background: #1fb457; }
+
+#tax-section .tax-earner { display: flex; gap: 8px; align-items: center; font-size: 12px; margin: 4px 0; }
+#tax-section .tax-earner label { display: flex; gap: 4px; align-items: center; }
+#tax-section .tax-earner input[type=number] { width: 5.5em; }
+#tax-section .tax-earner select { max-width: 8.5em; }
+#tax-home { margin: 2px 0 6px; }
+.tax-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+.tax-table td { padding: 2px 0; }
+.tax-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.tax-table tr.sub td { color: #898781; font-size: 11px; padding-top: 0; }
+.tax-table tr.tax-total td { border-top: 1px solid #c3c2b7; font-weight: 600; padding-top: 4px; }
+#tax-section .wfh { font-size: 11.5px; color: #52514e; }
+#tax-section select:disabled { opacity: .45; }

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>GISzilMap — Cleveland</title>
 <link rel="stylesheet" href="lib/maplibre-gl.css">
-<link rel="stylesheet" href="style.css?v=1789306988">
+<link rel="stylesheet" href="style.css?v=1789318979">
 </head>
 <body>
 <div id="map"></div>
@@ -80,6 +80,24 @@
     <div id="dot-legend" class="note"></div>
   </section>
 
+  <section id="tax-section">
+    <h2>Tax burden</h2>
+    <div class="tax-home note" id="tax-home">Click a block group or listing to set your residence.</div>
+    <div class="tax-earner">
+      <label>Earner 1 income <input id="inc1" type="number" step="5000" value="70000"></label>
+      <label class="wfh"><input id="wfh1" type="checkbox"> works from home</label>
+      <label>works in <select id="work1"></select></label>
+    </div>
+    <div class="tax-earner">
+      <label>Earner 2 income <input id="inc2" type="number" step="5000" value="0"></label>
+      <label class="wfh"><input id="wfh2" type="checkbox"> works from home</label>
+      <label>works in <select id="work2"></select></label>
+    </div>
+    <label class="tax-earner"><span>Home value</span> $<input id="homeval" type="number" step="10000" placeholder="from listing / asking"></label>
+    <div id="tax-out"></div>
+    <div class="note">Estimates. State 2.75% over $26,050. Municipal tax uses RITA/CCA rates with residence credit (reciprocity). Property = effective residential rate × home value (Cuyahoga at taxing-district precision; other counties use the county median). Sales tax shown for reference.</div>
+  </section>
+
   <div class="note" id="data-stamp"></div>
 
   <section class="note" id="caveats">
@@ -95,6 +113,6 @@
 <script src="lib/maplibre-gl.js"></script>
 <script src="lib/pmtiles.js"></script>
 <script src="lib/basemaps.js"></script>
-<script src="app.js?v=1789306988"></script>
+<script src="app.js?v=1789318979"></script>
 </body>
 </html>
