@@ -94,3 +94,4 @@ select { width: 100%; padding: 5px; font-size: 13px; }
 #tax-section .wfh { font-size: 11.5px; color: #52514e; }
 #tax-section select:disabled { opacity: .45; }
 .maplibregl-popup-content .tax-pop { border-top: 1px dotted #c3c2b7; }
+#visit-count { color: #898781; font-size: 10.5px; margin-top: 4px; }
