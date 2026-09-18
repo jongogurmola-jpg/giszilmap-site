@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
-<script>window.__EXPECTED_BUILD="1789717333";</script>
+<script>window.__EXPECTED_BUILD="1789738453";</script>
 <title>GISzilMap — Cleveland</title>
 <link rel="stylesheet" href="lib/maplibre-gl.css">
-<link rel="stylesheet" href="style.css?v=1789717333">
+<link rel="stylesheet" href="style.css?v=1789738453">
 </head>
 <body>
 <div id="map"></div>
@@ -45,6 +45,27 @@
     <label class="note">dot map census year
       <select id="dotyear"><option>2020</option><option>2010</option><option>2000</option></select>
     </label>
+    <div id="traffic-widget" class="twidget" hidden>
+      <label>show <select id="tmode">
+        <option value="vol">traffic volume</option>
+        <option value="vc">congestion (volume ÷ capacity)</option>
+      </select></label>
+      <label>when <select id="ttime">
+        <option value="day">daily average</option>
+        <option value="am">AM peak · 7–9</option>
+        <option value="mid">midday · 11–13</option>
+        <option value="pm">PM peak · 16–18</option>
+        <option value="eve">evening · 19–22</option>
+        <option value="night">night · 23–5</option>
+        <option value="hour">a single hour…</option>
+      </select></label>
+      <label id="thour-row" hidden><input id="thour" type="range" min="0" max="23" step="1" value="17"><span id="thour-val">17:00</span></label>
+      <label>on a <select id="tday">
+        <option value="wd">weekday</option>
+        <option value="we">weekend day</option>
+      </select></label>
+      <div class="note">AADT from ODOT count segments (mostly 2023–25); hour-of-day shape from FHWA hourly counts at Ohio's permanent stations, by road class. Congestion = estimated hourly volume ÷ hourly capacity (ODOT's model on state routes, planning defaults elsewhere) — a planning-level estimate, not live traffic.</div>
+    </div>
     <div class="listing-filters">
       <label>$<input id="pmin" type="number" step="10000" placeholder="min"></label>
       <label>–&nbsp;$<input id="pmax" type="number" step="10000" placeholder="max"></label>
@@ -126,6 +147,6 @@
 <script src="lib/maplibre-gl.js"></script>
 <script src="lib/pmtiles.js"></script>
 <script src="lib/basemaps.js"></script>
-<script src="app.js?v=1789717333"></script>
+<script src="app.js?v=1789738453"></script>
 </body>
 </html>

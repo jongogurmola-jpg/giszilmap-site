@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "1789717333";  // replaced with the publish timestamp by publish.sh
+const BUILD = "1789738453";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -85,6 +85,8 @@ const OVERLAYS = [
   { id: "grocery",   label: "Grocery stores",     color: "#1baf7a", on: false },
   { id: "worship",   label: "Places of worship",  color: "#4a3aa7", on: false },
   { id: "stripclubs", label: "Strip clubs",         color: "#0b0b0b", on: false },
+  { id: "speed",     label: "Speed limits",       color: "#eda100", on: false },
+  { id: "traffic",   label: "Traffic volume / congestion", color: "#d03b3b", on: false },
   { id: "parks",     label: "Parks",              color: "#008300", on: false },
   { id: "districts", label: "School districts",   color: "#52514e", on: false },
 ];
@@ -115,6 +117,18 @@ map.addControl(new maplibregl.ScaleControl({ maxWidth: 140, unit: "metric" }), "
 map.addControl(new maplibregl.ScaleControl({ maxWidth: 140, unit: "imperial" }), "bottom-right");
 
 let taxProfiles = null;     // {munis, counties, state}
+let trafficProfiles = null; // {groups:{g:{wd:[24],we:[24],df_wd,df_we,pk_wd,pk_we}}}
+
+/* speed-limit bins (mph) and traffic scales */
+const SPEED_BINS = [
+  [20, "#4a3aa7", "≤20"], [25, "#2a78d6", "25"], [35, "#1baf7a", "30–35"],
+  [45, "#eda100", "40–45"], [55, "#eb6834", "50–55"], [99, "#d03b3b", "60+"],
+];
+const SPEED_UNKNOWN = "#b8b6ae";
+const VC_STOPS = [[0, "#1baf7a"], [0.5, "#a6cf4a"], [0.7, "#eda100"], [0.85, "#eb6834"], [1.0, "#d03b3b"], [1.3, "#6e0b0b"]];
+const VPH_STOPS = [[0, "#d5e4f7"], [300, "#8db8ea"], [1000, "#2a78d6"], [3000, "#1d3f9c"], [8000, "#160a4a"]];
+const AADT_STOPS = [[0, "#d5e4f7"], [4000, "#8db8ea"], [15000, "#2a78d6"], [50000, "#1d3f9c"], [130000, "#160a4a"]];
+const TTIME_HOURS = { am: [7, 8], mid: [11, 12], pm: [16, 17], eve: [19, 20, 21], night: [23, 0, 1, 2, 3, 4] };
 let taxHome = null;         // {muni, county, propRate, propSrc, homeVal}
 let bgData = null;          // blockgroups geojson (for composite + popups)
 const bgIndex = new Map();  // GEOID -> properties
@@ -125,7 +139,7 @@ const baseCommute = new Map();  // GEOID -> baked Glenn values (for reset)
 
 map.on("load", async () => {
   /* block groups (choropleth base) */
-  bgData = await (await fetch("tiles/blockgroups.geojson?v=1789717333" + DEVQ)).json();
+  bgData = await (await fetch("tiles/blockgroups.geojson?v=1789738453" + DEVQ)).json();
   for (const f of bgData.features) {
     const p = f.properties;
     bgIndex.set(p.GEOID, p);
@@ -134,9 +148,11 @@ map.on("load", async () => {
       s_car: p.s_car, s_transit: p.s_transit, s_bike: p.s_bike,
     });
   }
-  bgOrder = await fetch("tiles/bg_order.json?v=1789717333" + DEVQ)
+  bgOrder = await fetch("tiles/bg_order.json?v=1789738453" + DEVQ)
     .then(r => r.ok ? r.json() : null).catch(() => null);
-  taxProfiles = await fetch("tiles/tax_profiles.json?v=1789717333" + DEVQ)
+  taxProfiles = await fetch("tiles/tax_profiles.json?v=1789738453" + DEVQ)
+    .then(r => r.ok ? r.json() : null).catch(() => null);
+  trafficProfiles = await fetch("tiles/traffic_profiles.json?v=1789738453" + DEVQ)
     .then(r => r.ok ? r.json() : null).catch(() => null);
   const CATS = ["white", "black", "hispanic", "asian", "multi", "other"];
   for (const f of bgData.features) {
@@ -146,10 +162,10 @@ map.on("load", async () => {
       const v = p["d_" + c];
       if (v != null && v > bv) { bv = v; best = c; }
     }
-  window.__trendCount = bgData.features.filter(f => f.properties.g_cat).length;
     p.g_cat = best; p.g_pp = best ? bv : null;
   }
   window.__trendCount = bgData.features.filter(f => f.properties.g_cat).length;
+  window.__map = map;  // debugging hook
   map.addSource("bg", { type: "geojson", data: bgData, promoteId: "GEOID" });
   map.addLayer({
     id: "bg-fill", type: "fill", source: "bg",
@@ -202,7 +218,7 @@ map.on("load", async () => {
   }, firstLabelLayer());
 
   /* county outline for orientation */
-  map.addSource("counties", { type: "geojson", data: "tiles/counties.geojson?v=1789717333" + DEVQ });
+  map.addSource("counties", { type: "geojson", data: "tiles/counties.geojson?v=1789738453" + DEVQ });
   map.addLayer({
     id: "county-line", type: "line", source: "counties",
     paint: { "line-color": "#52514e", "line-width": 1, "line-dasharray": [3, 2] },
@@ -224,7 +240,7 @@ map.on("load", async () => {
     }, firstLabelLayer());
   }
 
-  map.addSource("crimetrend", { type: "geojson", data: "tiles/crime_trend.geojson?v=1789717333" + DEVQ });
+  map.addSource("crimetrend", { type: "geojson", data: "tiles/crime_trend.geojson?v=1789738453" + DEVQ });
   map.addLayer({
     id: "crimetrend", type: "fill", source: "crimetrend",
     layout: { visibility: "none" },
@@ -246,6 +262,32 @@ map.on("load", async () => {
     paint: { "line-color": "rgba(11,11,11,0.25)", "line-width": 0.7 },
   }, firstLabelLayer());
 
+  /* street speed limits (ODOT road inventory + surveyed OSM signs) */
+  map.addSource("speed", { type: "vector", url: "pmtiles://tiles/roads_speed.pmtiles" });
+  map.addLayer({
+    id: "speed", type: "line", source: "speed", "source-layer": "roads",
+    layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
+    paint: {
+      "line-color": ["case", ["!", ["has", "spd"]], SPEED_UNKNOWN,
+        ["step", ["get", "spd"],
+          SPEED_BINS[0][1], 21, SPEED_BINS[1][1], 26, SPEED_BINS[2][1],
+          36, SPEED_BINS[3][1], 46, SPEED_BINS[4][1], 56, SPEED_BINS[5][1]]],
+      "line-width": ["interpolate", ["exponential", 1.4], ["zoom"],
+        8, ["case", ["<=", ["get", "fc"], 2], 1.6, 0.8],
+        12, ["case", ["<=", ["get", "fc"], 2], 3.2, ["<=", ["get", "fc"], 4], 2.4, 1.6],
+        15, ["case", ["<=", ["get", "fc"], 2], 7, ["<=", ["get", "fc"], 4], 5, 3.5]],
+      "line-opacity": 0.85,
+    },
+  }, firstLabelLayer());
+
+  /* traffic volume / congestion (ODOT AADT × FHWA hourly profiles) */
+  map.addSource("traffic", { type: "vector", url: "pmtiles://tiles/traffic.pmtiles" });
+  map.addLayer({
+    id: "traffic", type: "line", source: "traffic", "source-layer": "traffic",
+    layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
+    paint: { "line-color": "#2a78d6", "line-width": 2, "line-opacity": 0.9 },
+  }, firstLabelLayer());
+
   map.addSource("crimepts", { type: "vector", url: "pmtiles://tiles/crime.pmtiles" });
   map.addLayer({
     id: "crimepts", type: "circle", source: "crimepts", "source-layer": "crime",
@@ -257,13 +299,13 @@ map.on("load", async () => {
     },
   }, firstLabelLayer());
 
-  map.addSource("parks", { type: "geojson", data: "tiles/parks.geojson?v=1789717333" + DEVQ });
+  map.addSource("parks", { type: "geojson", data: "tiles/parks.geojson?v=1789738453" + DEVQ });
   map.addLayer({
     id: "parks", type: "fill", source: "parks",
     paint: { "fill-color": "#008300", "fill-opacity": 0.35 },
   }, firstLabelLayer());
 
-  map.addSource("amenities", { type: "geojson", data: "tiles/amenities.geojson?v=1789717333" + DEVQ });
+  map.addSource("amenities", { type: "geojson", data: "tiles/amenities.geojson?v=1789738453" + DEVQ });
   map.addLayer({
     id: "amenities", type: "circle", source: "amenities", minzoom: 11,
     paint: {
@@ -275,7 +317,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("grocery", { type: "geojson", data: "tiles/grocery.geojson?v=1789717333" + DEVQ });
+  map.addSource("grocery", { type: "geojson", data: "tiles/grocery.geojson?v=1789738453" + DEVQ });
   map.addLayer({
     id: "grocery", type: "circle", source: "grocery",
     paint: {
@@ -299,7 +341,7 @@ map.on("load", async () => {
              "text-halo-width": 1.2 },
   });
 
-  map.addSource("worship", { type: "geojson", data: "tiles/worship.geojson?v=1789717333" + DEVQ });
+  map.addSource("worship", { type: "geojson", data: "tiles/worship.geojson?v=1789738453" + DEVQ });
   map.addLayer({
     id: "worship", type: "circle", source: "worship", minzoom: 10,
     paint: {
@@ -311,7 +353,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("stripclubs", { type: "geojson", data: "tiles/stripclubs.geojson?v=1789717333" + DEVQ });
+  map.addSource("stripclubs", { type: "geojson", data: "tiles/stripclubs.geojson?v=1789738453" + DEVQ });
   map.loadImage("lib/bunny.png").then((img) => {
     if (!map.hasImage("bunny")) map.addImage("bunny", img.data);
     map.addLayer({
@@ -330,7 +372,7 @@ map.on("load", async () => {
     applyOverlays();
   }).catch(() => {});
 
-  map.addSource("districts", { type: "geojson", data: "tiles/school_districts.geojson?v=1789717333" + DEVQ });
+  map.addSource("districts", { type: "geojson", data: "tiles/school_districts.geojson?v=1789738453" + DEVQ });
   map.addLayer({
     id: "districts", type: "line", source: "districts",
     paint: { "line-color": "#52514e", "line-width": 1.2 },
@@ -344,7 +386,7 @@ map.on("load", async () => {
     paint: { "text-color": "#52514e", "text-halo-color": "#fcfcfb", "text-halo-width": 1.2 },
   });
 
-  map.addSource("listings", { type: "geojson", data: "tiles/listings.geojson?v=1789717333" + DEVQ });
+  map.addSource("listings", { type: "geojson", data: "tiles/listings.geojson?v=1789738453" + DEVQ });
   map.addLayer({
     id: "listings", type: "circle", source: "listings",
     paint: {
@@ -355,7 +397,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("sold", { type: "geojson", data: "tiles/sold.geojson?v=1789717333" + DEVQ });
+  map.addSource("sold", { type: "geojson", data: "tiles/sold.geojson?v=1789738453" + DEVQ });
   map.addLayer({
     id: "sold", type: "circle", source: "sold",
     paint: {
@@ -394,7 +436,7 @@ map.on("load", async () => {
     });
   })();
 
-  fetch("tiles/meta.json?v=1789717333" + DEVQ).then(r => r.ok ? r.json() : null).then(m => {
+  fetch("tiles/meta.json?v=1789738453" + DEVQ).then(r => r.ok ? r.json() : null).then(m => {
     if (m) $("data-stamp").textContent =
       `data as of ${m.updated} · ${m.listings.toLocaleString()} listings · ${m.sold.toLocaleString()} recent sales`
       + ` · build ${BUILD} · trend ${window.__trendCount ?? 0} areas`;
@@ -477,6 +519,11 @@ function buildPanel() {
 
   $("dotyear").value = HASH.dotyear ?? store.get("dotyear", "2020");
   $("dotyear").onchange = () => { store.set("dotyear", $("dotyear").value); applyOverlays(); };
+  const TDEF = { tmode: "vol", ttime: "day", tday: "wd", thour: "17" };
+  for (const id of Object.keys(TDEF)) {
+    $(id).value = HASH[id] ?? store.get(id, TDEF[id]);
+    $(id).oninput = () => { store.set(id, $(id).value); applyTraffic(); };
+  }
   const FILTER_DEFAULTS = { lstatus: "active", soldwin: "90", agemode: "listing" };
   for (const id of ["pmin", "pmax", "bmin", "bamin", "age", "agemode", "lstatus", "soldwin", "lmin", "lmax", "ptype", "sfmin", "sfmax", "ppsfmin", "ppsfmax"]) {
     $(id).value = HASH[id] ?? store.get(id, FILTER_DEFAULTS[id] ?? "");
@@ -530,6 +577,60 @@ function applyOverlays() {
     for (const id of [o.id, o.id + "-label", o.id + "-line"])
       if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", vis);
   }
+  const traffic = OVERLAYS.find(o => o.id === "traffic").on;
+  $("traffic-widget").hidden = !traffic;
+  if (traffic) applyTraffic(); else legendDots();
+}
+
+/* Per-group multiplier turning AADT into the volume for the selected time:
+   mean over selected hours of (day-type factor × hourly share). */
+function trafficFactors() {
+  const mode = $("tmode").value, when = $("ttime").value, day = $("tday").value;
+  const daily = when === "day";
+  const hours = when === "hour" ? [+$("thour").value] : (TTIME_HOURS[when] ?? []);
+  const f = [1, 1, 1, 1, 1];
+  if (!trafficProfiles) return { f, daily, hours, mode, day, hourly: false };
+  for (let g = 0; g < 5; g++) {
+    const pr = trafficProfiles.groups[g];
+    if (!pr) continue;
+    if (daily) {
+      // volume: AADT itself; congestion: the busiest weekday hour
+      f[g] = mode === "vc" ? pr.df_wd * pr.pk_wd : 1;
+    } else {
+      const shares = hours.map(h => pr[day][h]);
+      f[g] = pr["df_" + day] * shares.reduce((a, b) => a + b, 0) / shares.length;
+    }
+  }
+  return { f, daily, hours, mode, day, hourly: !daily || mode === "vc" };
+}
+
+function trafficVolumeExpr(f) {
+  return ["*", ["get", "aadt"], ["match", ["get", "g"], 0, f[0], 1, f[1], 2, f[2], 3, f[3], f[4]]];
+}
+
+function applyTraffic() {
+  if (!map.getLayer("traffic")) return;
+  const t = trafficFactors();
+  $("thour-row").hidden = $("ttime").value !== "hour";
+  $("thour-val").textContent = `${$("thour").value.padStart(2, "0")}:00`;
+  $("tday").disabled = t.daily;
+  $("ttime").options[0].textContent = t.mode === "vc" ? "busiest hour of the day" : "daily average";
+  const vol = trafficVolumeExpr(t.f);
+  let color, width;
+  if (t.mode === "vc") {
+    const vc = ["/", vol, ["max", ["get", "cap"], 1]];
+    color = ["interpolate", ["linear"], vc, ...VC_STOPS.flat()];
+    width = ["interpolate", ["linear"], ["zoom"], 8, 1.4, 12, 3, 15, 6];
+  } else {
+    const stops = t.daily ? AADT_STOPS : VPH_STOPS;
+    color = ["interpolate", ["linear"], vol, ...stops.flat()];
+    const top = stops[stops.length - 1][0];
+    const rel = ["min", 1, ["/", ["ln", ["max", vol, 1]], Math.log(top)]];
+    width = ["interpolate", ["linear"], ["zoom"],
+      8, ["+", 0.6, ["*", 2.4, rel]], 12, ["+", 1, ["*", 5, rel]], 15, ["+", 1.5, ["*", 9, rel]]];
+  }
+  map.setPaintProperty("traffic", "line-color", color);
+  map.setPaintProperty("traffic", "line-width", width);
   legendDots();
 }
 
@@ -803,6 +904,21 @@ function legendDots() {
       parts.push(`<span><i style="background:${c}"></i>${k}</span>`);
     parts.push(`<span>= group with biggest share gain since 2000; darker = larger gain</span>`);
   }
+  if (OVERLAYS.find(o => o.id === "speed").on) {
+    for (const [, c, lab] of SPEED_BINS)
+      parts.push(`<span><i class="bar" style="background:${c}"></i>${lab}</span>`);
+    parts.push(`<span><i class="bar" style="background:${SPEED_UNKNOWN}"></i>not on file</span><span>mph · ODOT inventory, OSM-surveyed signs where mapped</span>`);
+  }
+  if (OVERLAYS.find(o => o.id === "traffic").on) {
+    const t = trafficFactors();
+    const stops = t.mode === "vc" ? VC_STOPS : t.daily ? AADT_STOPS : VPH_STOPS;
+    const unit = t.mode === "vc" ? "" : t.daily ? " veh/day" : " veh/h";
+    for (const [v, c] of stops)
+      parts.push(`<span><i class="bar" style="background:${c}"></i>${t.mode === "vc" ? v.toFixed(2) : v.toLocaleString()}${unit}</span>`);
+    parts.push(t.mode === "vc"
+      ? `<span>volume ÷ capacity: 0.7 slowing · 0.85 heavy · ≥1 stop-and-go</span>`
+      : `<span>${t.daily ? "annual average daily traffic (both directions)" : "estimated vehicles per hour, both directions"}</span>`);
+  }
   if (OVERLAYS.find(o => o.id === "racedots").on)
     for (const [k, c] of Object.entries(DOT_COLORS))
       parts.push(`<span><i style="background:${c}"></i>${k}</span>`);
@@ -838,6 +954,21 @@ function wirePopups() {
         .setHTML(`<b>${p.name ?? p.chain ?? "(unnamed)"}</b><br>${p.chain ?? p.kind ?? p.religion ?? ""} ${p.denomination ?? ""}`)
         .addTo(map);
     }
+    feats = tryLayers(["traffic"]);
+    if (feats.length && map.getLayoutProperty("traffic", "visibility") === "visible")
+      return popupTraffic(e.lngLat, feats[0].properties);
+    feats = tryLayers(["speed"]);
+    if (feats.length && map.getLayoutProperty("speed", "visibility") === "visible") {
+      const p = feats[0].properties;
+      const cls = ["", "interstate", "freeway / expressway", "principal arterial",
+                   "minor arterial", "major collector", "minor collector", "local street"][p.fc] ?? "";
+      return new maplibregl.Popup().setLngLat(e.lngLat).setHTML(
+        `<h3>${p.name || "(unnamed)"}</h3>` +
+        (p.spd != null ? `<b>${p.spd} mph</b> <span class="popup-kv">(${p.src === "osm" ? "posted sign per OpenStreetMap" : "ODOT road inventory — statutory default on many local streets"})</span>`
+                       : `<span class="popup-kv">no speed limit on file</span>`) +
+        `<br><span class="popup-kv">${cls}${p.ln ? ` · ${p.ln} lanes` : ""}</span>`
+      ).addTo(map);
+    }
     feats = tryLayers(["crimetrend"]);
     if (feats.length && map.getLayoutProperty("crimetrend", "visibility") === "visible") {
       const p = feats[0].properties;
@@ -854,8 +985,44 @@ function wirePopups() {
       return popupScorecard(e.lngLat, props);
     }
   });
-  for (const id of ["listings", "sold", "grocery", "amenities", "worship", "bg-fill"])
+  for (const id of ["listings", "sold", "grocery", "amenities", "worship", "traffic", "speed", "bg-fill"])
     map.on("mouseenter", id, () => map.getCanvas().style.cursor = "pointer");
+}
+
+function popupTraffic(lngLat, p) {
+  const t = trafficFactors();
+  const pr = trafficProfiles?.groups[p.g];
+  const label = (trafficProfiles?.labels ?? [])[p.g] ?? "";
+  const vol = Math.round(p.aadt * t.f[p.g]);
+  const vc = vol / Math.max(p.cap, 1);
+  const grade = vc < 0.5 ? "free-flowing" : vc < 0.7 ? "light" : vc < 0.85 ? "slowing" : vc < 1 ? "heavy" : "stop-and-go";
+  const whenTxt = t.daily
+    ? (t.mode === "vc" ? "busiest weekday hour" : "daily average")
+    : `${$("ttime").selectedOptions[0].textContent.replace(/ · .*/, "")} on a ${t.day === "wd" ? "weekday" : "weekend day"}`;
+  let spark = "";
+  if (pr) {
+    const day = t.daily ? "wd" : t.day;
+    const hv = pr[day].map(sh => p.aadt * pr["df_" + day] * sh);
+    const mx = Math.max(...hv);
+    const W = 240, H = 46, bw = W / 24;
+    const bars = hv.map((v, h) => {
+      const sel = t.daily ? (t.mode === "vc" && v === mx) : t.hours.includes(h);
+      const bh = Math.max(1, v / mx * (H - 12));
+      return `<rect x="${(h * bw).toFixed(1)}" y="${(H - 10 - bh).toFixed(1)}" width="${(bw - 1).toFixed(1)}" height="${bh.toFixed(1)}" fill="${sel ? "#d03b3b" : "#8db8ea"}"><title>${h}:00 — ${Math.round(v).toLocaleString()} veh/h</title></rect>`;
+    }).join("");
+    const ticks = [0, 6, 12, 18].map(h => `<text x="${h * bw}" y="${H - 1}" font-size="8" fill="#898781">${h}</text>`).join("");
+    spark = `<svg class="spark" width="${W}" height="${H}">${bars}${ticks}</svg>` +
+      `<span class="popup-kv">estimated hourly volume, ${day === "wd" ? "weekday" : "weekend"} (${label} profile)</span>`;
+  }
+  const trk = p.trk != null && p.aadt ? ` · ${(100 * p.trk / p.aadt).toFixed(0)}% trucks` : "";
+  const html =
+    `<h3>${p.name || "(unnamed road)"}</h3>` +
+    `<b>${(+p.aadt).toLocaleString()} vehicles/day</b> <span class="popup-kv">(AADT ${p.yr ?? ""}${trk})</span><br>` +
+    `<span class="popup-kv">${label}${p.rc ? " (inferred from volume)" : ""}${p.ln ? ` · ${p.ln} lanes` : ""} · capacity ≈ ${(+p.cap).toLocaleString()} veh/h ${p.src === "odot" ? "(ODOT model)" : "(planning default)"}</span><br>` +
+    `<b>${whenTxt}:</b> ≈ ${vol.toLocaleString()} veh/h · v/c ${vc.toFixed(2)} — ${grade}` +
+    (p.los ? `<br><span class="popup-kv">ODOT congestion model: LOS ${p.los}${p.pk != null ? `, peak hour ${p.pk}:00` : ""}${p.delay ? `, ${p.delay} veh-h delay/day` : ""}</span>` : "") +
+    spark;
+  return new maplibregl.Popup({ maxWidth: "300px" }).setLngLat(lngLat).setHTML(html).addTo(map);
 }
 
 const shareCache = new Map();  // id -> {props, lngLat}
@@ -896,7 +1063,7 @@ async function openDeepLink() {
   if (hp) setTaxHome(bgIndex.get(hp.GEOID));
   if (!HASH.p) return;
   const url = decodeURIComponent(HASH.p);
-  for (const file of ["tiles/listings.geojson?v=1789717333" + DEVQ, "tiles/sold.geojson?v=1789717333" + DEVQ]) {
+  for (const file of ["tiles/listings.geojson?v=1789738453" + DEVQ, "tiles/sold.geojson?v=1789738453" + DEVQ]) {
     const fc = await fetch(file).then(r => r.ok ? r.json() : null).catch(() => null);
     const f = fc?.features.find(x => x.properties.url === url);
     if (f) {
