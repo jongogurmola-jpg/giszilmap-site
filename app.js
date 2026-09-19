@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "1789847136";  // replaced with the publish timestamp by publish.sh
+const BUILD = "1789852234";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -85,6 +85,7 @@ const OVERLAYS = [
   { id: "grocery",   label: "Grocery stores",     color: "#1baf7a", on: false },
   { id: "worship",   label: "Places of worship",  color: "#4a3aa7", on: false },
   { id: "stripclubs", label: "Strip clubs",         color: "#0b0b0b", on: false },
+  { id: "housing",    label: "Public & subsidized housing", color: "#b5178a", on: false },
   { id: "speed",     label: "Speed limits",       color: "#eda100", on: false },
   { id: "traffic",   label: "Traffic volume / congestion", color: "#d03b3b", on: false },
   { id: "parks",     label: "Parks",              color: "#008300", on: false },
@@ -95,10 +96,12 @@ const OVERLAYS = [
 const protocol = new pmtiles.Protocol();
 maplibregl.addProtocol("pmtiles", protocol.tile);
 
+// optional #view=zoom/lat/lng to open on a spot (shareable)
+const VIEW = (new URLSearchParams(location.hash.slice(1)).get("view") ?? "").split("/").map(Number);
 const map = new maplibregl.Map({
   container: "map",
-  center: [-81.68, 41.42],
-  zoom: 10,
+  center: VIEW.length === 3 && VIEW.every(Number.isFinite) ? [VIEW[2], VIEW[1]] : [-81.68, 41.42],
+  zoom: VIEW.length === 3 && VIEW.every(Number.isFinite) ? VIEW[0] : 10,
   maxBounds: [[-83.2, 40.4], [-80.2, 42.3]],
   style: {
     version: 8,
@@ -117,7 +120,10 @@ map.addControl(new maplibregl.ScaleControl({ maxWidth: 140, unit: "metric" }), "
 map.addControl(new maplibregl.ScaleControl({ maxWidth: 140, unit: "imperial" }), "bottom-right");
 
 let taxProfiles = null;     // {munis, counties, state}
-let trafficProfiles = null; // {groups:{g:{wd:[24],we:[24],df_wd,df_we,pk_wd,pk_we}}}
+let trafficProfiles = null;
+const HOUSING_COLORS = { ph: "#b5178a", pba: "#f06292", lihtc: "#7e57c2" };
+const HOUSING_LABEL = { ph: "public housing (housing authority)",
+                        pba: "HUD project-based assisted", lihtc: "tax-credit (LIHTC)" }; // {groups:{g:{wd:[24],we:[24],df_wd,df_we,pk_wd,pk_we}}}
 
 /* speed-limit bins (mph) and traffic scales */
 const SPEED_BINS = [
@@ -139,7 +145,7 @@ const baseCommute = new Map();  // GEOID -> baked Glenn values (for reset)
 
 map.on("load", async () => {
   /* block groups (choropleth base) */
-  bgData = await (await fetch("tiles/blockgroups.geojson?v=1789847136" + DEVQ)).json();
+  bgData = await (await fetch("tiles/blockgroups.geojson?v=1789852234" + DEVQ)).json();
   for (const f of bgData.features) {
     const p = f.properties;
     bgIndex.set(p.GEOID, p);
@@ -148,11 +154,11 @@ map.on("load", async () => {
       s_car: p.s_car, s_transit: p.s_transit, s_bike: p.s_bike,
     });
   }
-  bgOrder = await fetch("tiles/bg_order.json?v=1789847136" + DEVQ)
+  bgOrder = await fetch("tiles/bg_order.json?v=1789852234" + DEVQ)
     .then(r => r.ok ? r.json() : null).catch(() => null);
-  taxProfiles = await fetch("tiles/tax_profiles.json?v=1789847136" + DEVQ)
+  taxProfiles = await fetch("tiles/tax_profiles.json?v=1789852234" + DEVQ)
     .then(r => r.ok ? r.json() : null).catch(() => null);
-  trafficProfiles = await fetch("tiles/traffic_profiles.json?v=1789847136" + DEVQ)
+  trafficProfiles = await fetch("tiles/traffic_profiles.json?v=1789852234" + DEVQ)
     .then(r => r.ok ? r.json() : null).catch(() => null);
   const CATS = ["white", "black", "hispanic", "asian", "multi", "other"];
   for (const f of bgData.features) {
@@ -218,7 +224,7 @@ map.on("load", async () => {
   }, firstLabelLayer());
 
   /* county outline for orientation */
-  map.addSource("counties", { type: "geojson", data: "tiles/counties.geojson?v=1789847136" + DEVQ });
+  map.addSource("counties", { type: "geojson", data: "tiles/counties.geojson?v=1789852234" + DEVQ });
   map.addLayer({
     id: "county-line", type: "line", source: "counties",
     paint: { "line-color": "#52514e", "line-width": 1, "line-dasharray": [3, 2] },
@@ -240,7 +246,7 @@ map.on("load", async () => {
     }, firstLabelLayer());
   }
 
-  map.addSource("crimetrend", { type: "geojson", data: "tiles/crime_trend.geojson?v=1789847136" + DEVQ });
+  map.addSource("crimetrend", { type: "geojson", data: "tiles/crime_trend.geojson?v=1789852234" + DEVQ });
   map.addLayer({
     id: "crimetrend", type: "fill", source: "crimetrend",
     layout: { visibility: "none" },
@@ -299,13 +305,13 @@ map.on("load", async () => {
     },
   }, firstLabelLayer());
 
-  map.addSource("parks", { type: "geojson", data: "tiles/parks.geojson?v=1789847136" + DEVQ });
+  map.addSource("parks", { type: "geojson", data: "tiles/parks.geojson?v=1789852234" + DEVQ });
   map.addLayer({
     id: "parks", type: "fill", source: "parks",
     paint: { "fill-color": "#008300", "fill-opacity": 0.35 },
   }, firstLabelLayer());
 
-  map.addSource("amenities", { type: "geojson", data: "tiles/amenities.geojson?v=1789847136" + DEVQ });
+  map.addSource("amenities", { type: "geojson", data: "tiles/amenities.geojson?v=1789852234" + DEVQ });
   map.addLayer({
     id: "amenities", type: "circle", source: "amenities", minzoom: 11,
     paint: {
@@ -317,7 +323,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("grocery", { type: "geojson", data: "tiles/grocery.geojson?v=1789847136" + DEVQ });
+  map.addSource("grocery", { type: "geojson", data: "tiles/grocery.geojson?v=1789852234" + DEVQ });
   map.addLayer({
     id: "grocery", type: "circle", source: "grocery",
     paint: {
@@ -341,7 +347,7 @@ map.on("load", async () => {
              "text-halo-width": 1.2 },
   });
 
-  map.addSource("worship", { type: "geojson", data: "tiles/worship.geojson?v=1789847136" + DEVQ });
+  map.addSource("worship", { type: "geojson", data: "tiles/worship.geojson?v=1789852234" + DEVQ });
   map.addLayer({
     id: "worship", type: "circle", source: "worship", minzoom: 10,
     paint: {
@@ -353,7 +359,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("stripclubs", { type: "geojson", data: "tiles/stripclubs.geojson?v=1789847136" + DEVQ });
+  map.addSource("stripclubs", { type: "geojson", data: "tiles/stripclubs.geojson?v=1789852234" + DEVQ });
   map.loadImage("lib/bunny.png").then((img) => {
     if (!map.hasImage("bunny")) map.addImage("bunny", img.data);
     map.addLayer({
@@ -372,7 +378,36 @@ map.on("load", async () => {
     applyOverlays();
   }).catch(() => {});
 
-  map.addSource("districts", { type: "geojson", data: "tiles/school_districts.geojson?v=1789847136" + DEVQ });
+  map.addSource("housing", { type: "geojson", data: "tiles/housing.geojson?v=1789852234" + DEVQ });
+  // radius grows with units (log-ish): a scattered-site house stays a dot,
+  // a 200-unit tower reads as a blob; public housing drawn on top.
+  const unitR = (lo, hi) => ["interpolate", ["linear"], ["sqrt", ["coalesce", ["get", "units"], 1]],
+                             1, lo, 15, hi];
+  map.addLayer({
+    id: "housing", type: "circle", source: "housing",
+    layout: { visibility: "none",
+              "circle-sort-key": ["match", ["get", "kind"], "ph", 3, "pba", 2, 1] },
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, unitR(1.5, 5), 14, unitR(4, 16)],
+      "circle-color": ["match", ["get", "kind"], "ph", HOUSING_COLORS.ph,
+                       "pba", HOUSING_COLORS.pba, HOUSING_COLORS.lihtc],
+      "circle-opacity": 0.8,
+      "circle-stroke-color": "#fcfcfb", "circle-stroke-width": 0.8,
+    },
+  });
+  map.addLayer({
+    id: "housing-label", type: "symbol", source: "housing", minzoom: 12,
+    filter: [">=", ["coalesce", ["get", "units"], 0], 40],
+    layout: {
+      visibility: "none",
+      "text-field": ["get", "name"], "text-size": 10,
+      "text-offset": [0, 1.2], "text-anchor": "top",
+      "text-font": ["Noto Sans Regular"], "text-optional": true,
+    },
+    paint: { "text-color": "#7a0f5c", "text-halo-color": "#fcfcfb", "text-halo-width": 1.2 },
+  });
+
+  map.addSource("districts", { type: "geojson", data: "tiles/school_districts.geojson?v=1789852234" + DEVQ });
   map.addLayer({
     id: "districts", type: "line", source: "districts",
     paint: { "line-color": "#52514e", "line-width": 1.2 },
@@ -386,7 +421,7 @@ map.on("load", async () => {
     paint: { "text-color": "#52514e", "text-halo-color": "#fcfcfb", "text-halo-width": 1.2 },
   });
 
-  map.addSource("listings", { type: "geojson", data: "tiles/listings.geojson?v=1789847136" + DEVQ });
+  map.addSource("listings", { type: "geojson", data: "tiles/listings.geojson?v=1789852234" + DEVQ });
   map.addLayer({
     id: "listings", type: "circle", source: "listings",
     paint: {
@@ -397,7 +432,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("sold", { type: "geojson", data: "tiles/sold.geojson?v=1789847136" + DEVQ });
+  map.addSource("sold", { type: "geojson", data: "tiles/sold.geojson?v=1789852234" + DEVQ });
   map.addLayer({
     id: "sold", type: "circle", source: "sold",
     paint: {
@@ -436,7 +471,7 @@ map.on("load", async () => {
     });
   })();
 
-  fetch("tiles/meta.json?v=1789847136" + DEVQ).then(r => r.ok ? r.json() : null).then(m => {
+  fetch("tiles/meta.json?v=1789852234" + DEVQ).then(r => r.ok ? r.json() : null).then(m => {
     if (m) $("data-stamp").textContent =
       `data as of ${m.updated} · ${m.listings.toLocaleString()} listings · ${m.sold.toLocaleString()} recent sales`
       + ` · build ${BUILD} · trend ${window.__trendCount ?? 0} areas`;
@@ -919,6 +954,11 @@ function legendDots() {
       ? `<em class="legend-note">volume ÷ capacity: 0.7 slowing · 0.85 heavy · ≥1 stop-and-go</em>`
       : `<em class="legend-note">${t.daily ? "annual average daily traffic (both directions)" : "estimated vehicles per hour, both directions"}</em>`);
   }
+  if (OVERLAYS.find(o => o.id === "housing").on) {
+    for (const k of ["ph", "pba", "lihtc"])
+      parts.push(`<span><i style="background:${HOUSING_COLORS[k]}"></i>${HOUSING_LABEL[k]}</span>`);
+    parts.push(`<em class="legend-note">dot size = units; one dot per building for public housing (HUD, 2025)</em>`);
+  }
   if (OVERLAYS.find(o => o.id === "racedots").on)
     for (const [k, c] of Object.entries(DOT_COLORS))
       parts.push(`<span><i style="background:${c}"></i>${k}</span>`);
@@ -947,6 +987,9 @@ function wirePopups() {
 
     let feats = tryLayers(["listings", "sold"]);
     if (feats.length) return popupListing(e.lngLat, feats[0].properties);
+    feats = tryLayers(["housing"]);
+    if (feats.length && map.getLayoutProperty("housing", "visibility") === "visible")
+      return popupHousing(e.lngLat, feats[0].properties);
     feats = tryLayers(["stripclubs", "grocery", "amenities", "worship"]);
     if (feats.length) {
       const p = feats[0].properties;
@@ -985,8 +1028,31 @@ function wirePopups() {
       return popupScorecard(e.lngLat, props);
     }
   });
-  for (const id of ["listings", "sold", "grocery", "amenities", "worship", "traffic", "speed", "bg-fill"])
+  for (const id of ["listings", "sold", "grocery", "amenities", "worship", "housing", "traffic", "speed", "bg-fill"])
     map.on("mouseenter", id, () => map.getCanvas().style.cursor = "pointer");
+}
+
+function popupHousing(lngLat, p) {
+  const kv = [];
+  if (p.units != null) kv.push(`<b>${p.units} unit${p.units === 1 ? "" : "s"}</b>` +
+    (p.aunits != null && p.aunits !== p.units ? ` <span class="popup-kv">(${p.aunits} subsidized/income-restricted)</span>` : ""));
+  if (p.btype) kv.push(p.btype);
+  if (p.prog) kv.push(p.prog);
+  if (p.pop) kv.push(`for: ${p.pop.toLowerCase()}`);
+  if (p.built) kv.push(`built ${p.built}`);
+  if (p.eld != null || p.dis != null)
+    kv.push(`residents: ${p.eld ?? "?"}% age 62+ · ${p.dis ?? "?"}% disabled`);
+  if (p.rad) kv.push(`RAD conversion (${p.rad})`);
+  if (p.rentassist) kv.push("some units also carry rental assistance");
+  if (p.reac != null) kv.push(`last HUD REAC inspection score ${p.reac}/100`);
+  if (p.expires) kv.push(`subsidy contract expires ${p.expires}`);
+  if (p.status) kv.push(`<b>${p.status}</b>`);
+  return new maplibregl.Popup({ maxWidth: "300px" }).setLngLat(lngLat).setHTML(
+    `<h3>${p.name || "(unnamed)"}</h3>` +
+    `<span class="popup-kv" style="color:${HOUSING_COLORS[p.kind]}">${HOUSING_LABEL[p.kind]}</span><br>` +
+    `<span class="popup-kv">${[p.addr, p.city].filter(Boolean).join(", ")}${p.owner ? ` · ${p.owner}` : ""}</span><br>` +
+    kv.join("<br>")
+  ).addTo(map);
 }
 
 function popupTraffic(lngLat, p) {
@@ -1063,7 +1129,7 @@ async function openDeepLink() {
   if (hp) setTaxHome(bgIndex.get(hp.GEOID));
   if (!HASH.p) return;
   const url = decodeURIComponent(HASH.p);
-  for (const file of ["tiles/listings.geojson?v=1789847136" + DEVQ, "tiles/sold.geojson?v=1789847136" + DEVQ]) {
+  for (const file of ["tiles/listings.geojson?v=1789852234" + DEVQ, "tiles/sold.geojson?v=1789852234" + DEVQ]) {
     const fc = await fetch(file).then(r => r.ok ? r.json() : null).catch(() => null);
     const f = fc?.features.find(x => x.properties.url === url);
     if (f) {
