@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
-<script>window.__EXPECTED_BUILD="1789868727";</script>
+<script>window.__EXPECTED_BUILD="1789878791";</script>
 <title>GISzilMap — Cleveland</title>
 <link rel="stylesheet" href="lib/maplibre-gl.css">
-<link rel="stylesheet" href="style.css?v=1789868727">
+<link rel="stylesheet" href="style.css?v=1789878791">
 </head>
 <body>
 <div id="map"></div>
@@ -113,6 +113,18 @@
     <div id="dot-legend" class="note"></div>
   </section>
 
+  <section id="market-section">
+    <h2>Market insights</h2>
+    <label class="mkt-city">city <select id="mcity"><option value="">whole metro</option></select></label>
+    <div id="market-out" class="note">loading listings…</div>
+    <div class="note">Applies the listing filters above (all statuses). Sale-vs-asking
+      uses the asking price this map last saw for the house (Realtor.com's list
+      price as fallback); days to pending/contract come from the map's own
+      6-hourly snapshots since 2026-08-28, so they're known only for houses that
+      went under contract since then. Dashed lines mark medians; each histogram
+      series is scaled to its own peak.</div>
+  </section>
+
   <section id="tax-section">
     <h2>Tax burden</h2>
     <div class="tax-home note" id="tax-home">Click a block group or listing to set your residence.</div>
@@ -147,6 +159,6 @@
 <script src="lib/maplibre-gl.js"></script>
 <script src="lib/pmtiles.js"></script>
 <script src="lib/basemaps.js"></script>
-<script src="app.js?v=1789868727"></script>
+<script src="app.js?v=1789878791"></script>
 </body>
 </html>

@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "1789868727";  // replaced with the publish timestamp by publish.sh
+const BUILD = "1789878791";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -145,7 +145,7 @@ const baseCommute = new Map();  // GEOID -> baked Glenn values (for reset)
 
 map.on("load", async () => {
   /* block groups (choropleth base) */
-  bgData = await (await fetch("tiles/blockgroups.geojson?v=1789868727" + DEVQ)).json();
+  bgData = await (await fetch("tiles/blockgroups.geojson?v=1789878791" + DEVQ)).json();
   for (const f of bgData.features) {
     const p = f.properties;
     bgIndex.set(p.GEOID, p);
@@ -154,11 +154,11 @@ map.on("load", async () => {
       s_car: p.s_car, s_transit: p.s_transit, s_bike: p.s_bike,
     });
   }
-  bgOrder = await fetch("tiles/bg_order.json?v=1789868727" + DEVQ)
+  bgOrder = await fetch("tiles/bg_order.json?v=1789878791" + DEVQ)
     .then(r => r.ok ? r.json() : null).catch(() => null);
-  taxProfiles = await fetch("tiles/tax_profiles.json?v=1789868727" + DEVQ)
+  taxProfiles = await fetch("tiles/tax_profiles.json?v=1789878791" + DEVQ)
     .then(r => r.ok ? r.json() : null).catch(() => null);
-  trafficProfiles = await fetch("tiles/traffic_profiles.json?v=1789868727" + DEVQ)
+  trafficProfiles = await fetch("tiles/traffic_profiles.json?v=1789878791" + DEVQ)
     .then(r => r.ok ? r.json() : null).catch(() => null);
   const CATS = ["white", "black", "hispanic", "asian", "multi", "other"];
   for (const f of bgData.features) {
@@ -224,7 +224,7 @@ map.on("load", async () => {
   }, firstLabelLayer());
 
   /* county outline for orientation */
-  map.addSource("counties", { type: "geojson", data: "tiles/counties.geojson?v=1789868727" + DEVQ });
+  map.addSource("counties", { type: "geojson", data: "tiles/counties.geojson?v=1789878791" + DEVQ });
   map.addLayer({
     id: "county-line", type: "line", source: "counties",
     paint: { "line-color": "#52514e", "line-width": 1, "line-dasharray": [3, 2] },
@@ -246,7 +246,7 @@ map.on("load", async () => {
     }, firstLabelLayer());
   }
 
-  map.addSource("crimetrend", { type: "geojson", data: "tiles/crime_trend.geojson?v=1789868727" + DEVQ });
+  map.addSource("crimetrend", { type: "geojson", data: "tiles/crime_trend.geojson?v=1789878791" + DEVQ });
   map.addLayer({
     id: "crimetrend", type: "fill", source: "crimetrend",
     layout: { visibility: "none" },
@@ -305,13 +305,13 @@ map.on("load", async () => {
     },
   }, firstLabelLayer());
 
-  map.addSource("parks", { type: "geojson", data: "tiles/parks.geojson?v=1789868727" + DEVQ });
+  map.addSource("parks", { type: "geojson", data: "tiles/parks.geojson?v=1789878791" + DEVQ });
   map.addLayer({
     id: "parks", type: "fill", source: "parks",
     paint: { "fill-color": "#008300", "fill-opacity": 0.35 },
   }, firstLabelLayer());
 
-  map.addSource("amenities", { type: "geojson", data: "tiles/amenities.geojson?v=1789868727" + DEVQ });
+  map.addSource("amenities", { type: "geojson", data: "tiles/amenities.geojson?v=1789878791" + DEVQ });
   map.addLayer({
     id: "amenities", type: "circle", source: "amenities", minzoom: 11,
     paint: {
@@ -323,7 +323,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("grocery", { type: "geojson", data: "tiles/grocery.geojson?v=1789868727" + DEVQ });
+  map.addSource("grocery", { type: "geojson", data: "tiles/grocery.geojson?v=1789878791" + DEVQ });
   map.addLayer({
     id: "grocery", type: "circle", source: "grocery",
     paint: {
@@ -347,7 +347,7 @@ map.on("load", async () => {
              "text-halo-width": 1.2 },
   });
 
-  map.addSource("worship", { type: "geojson", data: "tiles/worship.geojson?v=1789868727" + DEVQ });
+  map.addSource("worship", { type: "geojson", data: "tiles/worship.geojson?v=1789878791" + DEVQ });
   map.addLayer({
     id: "worship", type: "circle", source: "worship", minzoom: 10,
     paint: {
@@ -359,7 +359,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("stripclubs", { type: "geojson", data: "tiles/stripclubs.geojson?v=1789868727" + DEVQ });
+  map.addSource("stripclubs", { type: "geojson", data: "tiles/stripclubs.geojson?v=1789878791" + DEVQ });
   map.loadImage("lib/bunny.png").then((img) => {
     if (!map.hasImage("bunny")) map.addImage("bunny", img.data);
     map.addLayer({
@@ -378,7 +378,7 @@ map.on("load", async () => {
     applyOverlays();
   }).catch(() => {});
 
-  map.addSource("housing", { type: "geojson", data: "tiles/housing.geojson?v=1789868727" + DEVQ });
+  map.addSource("housing", { type: "geojson", data: "tiles/housing.geojson?v=1789878791" + DEVQ });
   // radius grows with units (log-ish): a scattered-site house stays a dot,
   // a 200-unit tower reads as a blob; public housing drawn on top.
   const unitR = (lo, hi) => ["interpolate", ["linear"], ["sqrt", ["coalesce", ["get", "units"], 1]],
@@ -407,7 +407,7 @@ map.on("load", async () => {
     paint: { "text-color": "#7a0f5c", "text-halo-color": "#fcfcfb", "text-halo-width": 1.2 },
   });
 
-  map.addSource("districts", { type: "geojson", data: "tiles/school_districts.geojson?v=1789868727" + DEVQ });
+  map.addSource("districts", { type: "geojson", data: "tiles/school_districts.geojson?v=1789878791" + DEVQ });
   map.addLayer({
     id: "districts", type: "line", source: "districts",
     paint: { "line-color": "#52514e", "line-width": 1.2 },
@@ -421,7 +421,7 @@ map.on("load", async () => {
     paint: { "text-color": "#52514e", "text-halo-color": "#fcfcfb", "text-halo-width": 1.2 },
   });
 
-  map.addSource("listings", { type: "geojson", data: "tiles/listings.geojson?v=1789868727" + DEVQ });
+  map.addSource("listings", { type: "geojson", data: "tiles/listings.geojson?v=1789878791" + DEVQ });
   map.addLayer({
     id: "listings", type: "circle", source: "listings",
     paint: {
@@ -432,7 +432,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("sold", { type: "geojson", data: "tiles/sold.geojson?v=1789868727" + DEVQ });
+  map.addSource("sold", { type: "geojson", data: "tiles/sold.geojson?v=1789878791" + DEVQ });
   map.addLayer({
     id: "sold", type: "circle", source: "sold",
     paint: {
@@ -471,7 +471,7 @@ map.on("load", async () => {
     });
   })();
 
-  fetch("tiles/meta.json?v=1789868727" + DEVQ).then(r => r.ok ? r.json() : null).then(m => {
+  fetch("tiles/meta.json?v=1789878791" + DEVQ).then(r => r.ok ? r.json() : null).then(m => {
     if (m) $("data-stamp").textContent =
       `data as of ${m.updated} · ${m.listings.toLocaleString()} listings · ${m.sold.toLocaleString()} recent sales`
       + ` · build ${BUILD} · trend ${window.__trendCount ?? 0} areas`;
@@ -565,6 +565,7 @@ function buildPanel() {
     $(id).onchange = () => { store.set(id, $(id).value); applyListingFilter(); legendDots(); };
   }
   applyListingFilter();
+  loadMarketData();
 
   $("dest-change").onclick = () => {
     pickingDest = true;
@@ -669,8 +670,7 @@ function applyTraffic() {
   legendDots();
 }
 
-function applyListingFilter() {
-  if (!map.getLayer("listings")) return;
+function buildListingFilters() {
   const f = ["all"];
   const st = $("lstatus").value;
   if (st === "active") f.push(["==", ["coalesce", ["get", "status"], "active"], "active"]);
@@ -705,14 +705,215 @@ function applyListingFilter() {
       ? ["<=", ["coalesce", ["get", field], 99999], days]
       : [">=", ["coalesce", ["get", field], -1], days]);
   }
+  // sold: same price/beds/baths constraints, plus the sold-within horizon
+  const g = f.filter(x => { const j = JSON.stringify(x);
+    return !(j.includes('"status"') || j.includes('"days_on_market"')); });
+  g.push(["<=", ["coalesce", ["get", "days_since_sold"], 999], +$("soldwin").value]);
+  return { listing: f, sold: g };
+}
+
+function applyListingFilter() {
+  if (!map.getLayer("listings")) return;
+  const { listing: f, sold: g } = buildListingFilters();
   map.setFilter("listings", f.length > 1 ? f : null);
-  if (map.getLayer("sold")) {
-    // same price/beds/baths constraints, plus the sold-within horizon
-    const g = f.filter(x => { const j = JSON.stringify(x);
-      return !(j.includes('"status"') || j.includes('"days_on_market"')); });
-    g.push(["<=", ["coalesce", ["get", "days_since_sold"], 999], +$("soldwin").value]);
-    map.setFilter("sold", g);
+  if (map.getLayer("sold")) map.setFilter("sold", g);
+  marketInsights();
+}
+
+/* ---------- market insights ---------- */
+let mktData = null;   // { listings: [{p, city, ll}], sold: [...] }, loaded once
+
+function cityNorm(c) {
+  // sources leak unit ids / hyphens / case into the city ("V4m67t Fairlawn",
+  // "Mentor-on-the-lake", "Sheffield village"): strip and title-case
+  if (!c) return null;
+  const s = c.replace(/\b\w*\d\w*\b/g, " ").replace(/[-_]/g, " ")
+             .replace(/\s+/g, " ").trim().toLowerCase();
+  return s ? s.replace(/\b\w/g, ch => ch.toUpperCase()) : null;
+}
+
+// Evaluates the subset of MapLibre filter expressions buildListingFilters()
+// emits, so the insights use exactly the filters the map shows.
+function evalExpr(e, p) {
+  if (!Array.isArray(e)) return e;
+  const [op, ...a] = e;
+  switch (op) {
+    case "all": return a.every(x => evalExpr(x, p));
+    case "get": return p[a[0]] ?? null;
+    case "has": return p[a[0]] != null;
+    case "literal": return a[0];
+    case "coalesce":
+      for (const x of a) { const v = evalExpr(x, p); if (v != null) return v; }
+      return null;
+    case "case":
+      for (let i = 0; i + 1 < a.length; i += 2) if (evalExpr(a[i], p)) return evalExpr(a[i + 1], p);
+      return evalExpr(a[a.length - 1], p);
+    case "==": return evalExpr(a[0], p) === evalExpr(a[1], p);
+    case "!=": return evalExpr(a[0], p) !== evalExpr(a[1], p);
+    case ">=": return evalExpr(a[0], p) >= evalExpr(a[1], p);
+    case "<=": return evalExpr(a[0], p) <= evalExpr(a[1], p);
+    case "/": return evalExpr(a[0], p) / evalExpr(a[1], p);
+    case "in": { const arr = evalExpr(a[1], p); return Array.isArray(arr) && arr.includes(evalExpr(a[0], p)); }
+    default: return true;
   }
+}
+
+const median = (v) => {
+  if (!v.length) return null;
+  const s = [...v].sort((a, b) => a - b), m = s.length >> 1;
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+};
+const quantile = (sorted, q) => sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] : null;
+const money = v => v == null ? "—" : "$" + Math.round(v).toLocaleString();
+const pct = (n, d) => d ? Math.round(n / d * 100) + "%" : "—";
+
+// Grouped-bar histogram; each series is scaled to its own peak so shapes
+// compare across different sample sizes. Dashed line = that series' median.
+function histSVG(series, { lo, hi, step, tick }) {
+  const nb = Math.round((hi - lo) / step);
+  const W = 288, H = 56, B = 13;
+  const bw = W / nb, k = series.length, sw = (bw - 1.2) / k;
+  let svg = `<svg class="hist" viewBox="0 0 ${W} ${H + B}" width="100%" height="${H + B}" role="img">`;
+  series.forEach((s, j) => {
+    const c = new Array(nb).fill(0);
+    for (const v of s.values) c[Math.max(0, Math.min(nb - 1, Math.floor((v - lo) / step)))]++;
+    const mx = Math.max(1, ...c);
+    c.forEach((n, i) => {
+      if (!n) return;
+      const h = Math.max(1, n / mx * (H - 3));
+      const a = lo + i * step, col = typeof s.color === "function" ? s.color(a) : s.color;
+      svg += `<rect x="${(i * bw + j * sw).toFixed(1)}" y="${(H - h).toFixed(1)}" width="${sw.toFixed(1)}" height="${h.toFixed(1)}" fill="${col}" opacity="${s.opacity ?? 1}"><title>${s.label} ${tick(a)}–${tick(a + step)}: ${n}</title></rect>`;
+    });
+    const m = median(s.values);
+    if (m != null) {
+      const x = Math.max(0, Math.min(1, (m - lo) / (hi - lo))) * W;
+      svg += `<line x1="${x.toFixed(1)}" y1="0" x2="${x.toFixed(1)}" y2="${H}" stroke="${typeof s.color === "function" ? "#0b0b0b" : s.color}" stroke-width="1.2" stroke-dasharray="2 2"/>`;
+    }
+  });
+  svg += `<line x1="0" y1="${H}" x2="${W}" y2="${H}" stroke="#c9c8c0" stroke-width="1"/>`;
+  // ticks on bin edges, ~4 apart, last one at the (clamped) upper edge
+  const tk = Math.ceil(nb / 4);
+  for (let i = 0; i <= nb; i += tk) {
+    if (i !== 0 && nb - i < tk / 2) continue;
+    svg += `<text x="${(i * bw).toFixed(1)}" y="${H + B - 2}" font-size="9" fill="#898781" text-anchor="${i === 0 ? "start" : "middle"}">${tick(lo + i * step)}</text>`;
+  }
+  svg += `<text x="${W}" y="${H + B - 2}" font-size="9" fill="#898781" text-anchor="end">${tick(hi)}+</text>`;
+  return svg + "</svg>";
+}
+
+function buildCityOptions() {
+  const counts = new Map();
+  for (const r of mktData.listings) if (r.city) counts.set(r.city, (counts.get(r.city) ?? 0) + 1);
+  for (const r of mktData.sold) if (r.city) counts.set(r.city, (counts.get(r.city) ?? 0) + 1);
+  const sel = $("mcity");
+  const cur = HASH.mcity ?? store.get("mcity", "");
+  sel.innerHTML = "";
+  sel.add(new Option("whole metro", ""));
+  sel.add(new Option("current map view", "__view"));
+  for (const c of [...counts.keys()].sort()) sel.add(new Option(`${c} (${counts.get(c)})`, c));
+  sel.value = cur;
+  if (sel.value !== cur) sel.value = "";
+  sel.onchange = () => { store.set("mcity", sel.value); marketInsights(); };
+  let t = null;
+  map.on("moveend", () => { if (sel.value === "__view") { clearTimeout(t); t = setTimeout(marketInsights, 150); } });
+}
+
+async function loadMarketData() {
+  try {
+    const [l, s] = await Promise.all(["listings", "sold"].map(n =>
+      fetch(`tiles/${n}.geojson` + DEVQ).then(r => r.ok ? r.json() : { features: [] })));
+    const wrap = fc => fc.features.map(f => ({
+      p: f.properties, city: cityNorm(f.properties.city), ll: f.geometry.coordinates }));
+    mktData = { listings: wrap(l), sold: wrap(s) };
+  } catch (e) {
+    console.warn("market data", e);
+    mktData = { listings: [], sold: [] };
+  }
+  buildCityOptions();
+  marketInsights();
+}
+
+function marketInsights() {
+  const out = $("market-out");
+  if (!mktData || !out) return;
+  const city = $("mcity").value;
+  const { listing: f, sold: g } = buildListingFilters();
+  // status is the one listing filter ignored: the point is to see all stages
+  const fl = f.filter(x => !JSON.stringify(x).includes('"status"'));
+  const bounds = city === "__view" ? map.getBounds() : null;
+  const inScope = r => city === "" ? true
+    : city === "__view" ? bounds.contains(r.ll) : r.city === city;
+  const L = mktData.listings.filter(r => inScope(r) && evalExpr(fl, r.p)).map(r => r.p);
+  const S = mktData.sold.filter(r => inScope(r) && evalExpr(g, r.p)).map(r => r.p);
+  const soldwin = +$("soldwin").value;
+
+  const active = L.filter(p => !p.status || p.status === "active");
+  const cont = L.filter(p => p.status === "contingent");
+  const pend = L.filter(p => p.status === "pending");
+  const ppsf = rows => rows.filter(p => p.sqft > 0 && p.price / p.sqft > 10 && p.price / p.sqft < 1500)
+                           .map(p => p.price / p.sqft);
+  const ppsfA = ppsf(active), ppsfS = ppsf(S);
+  const domA = active.map(p => p.days_on_market).filter(v => v != null);
+  const domP = [...cont, ...pend].map(p => p.days_to_pending).filter(v => v != null);
+  const domS = S.map(p => p.dom).filter(v => v != null);
+  const s2l = S.map(p => p.sale_to_list).filter(v => v != null);
+  const above = s2l.filter(v => v > 0).length, at = s2l.filter(v => v === 0).length;
+  const cuts = active.filter(p => p.price_change_pct < 0);
+  const newWeek = active.filter(p => p.days_on_market != null && p.days_on_market <= 7).length;
+  const perMonth = S.length / soldwin * 30.4;
+  const supply = perMonth > 0 ? active.length / perMonth : null;
+
+  const kv = (k, v, note = "") => `<div class="mkt-row"><span>${k}</span><b>${v}</b>${note ? `<i>${note}</i>` : ""}</div>`;
+  const n = (arr) => `n=${arr.length}`;
+  if (!L.length && !S.length) { out.innerHTML = `<div class="note">nothing matches the current filters here</div>`; return; }
+  let html = `<div class="mkt-grid">
+    ${kv("active", active.length.toLocaleString(), newWeek ? `${newWeek} new this week` : "")}
+    ${kv("contingent / pending", `${cont.length} / ${pend.length}`)}
+    ${kv(`sold, last ${soldwin} d`, S.length.toLocaleString(), supply != null && active.length ? `${supply.toFixed(1)} months of supply` : "")}
+    ${kv("median asking", money(median(active.map(p => p.price))), n(active))}
+    ${kv("median sold", money(median(S.map(p => p.price))), n(S))}
+    ${kv("asking $/sqft", money(median(ppsfA)), n(ppsfA))}
+    ${kv("sold $/sqft", money(median(ppsfS)), n(ppsfS))}
+    ${kv("days on market", median(domA) != null ? fmt(median(domA)) + " d" : "—", "active listings, median")}
+    ${kv("days to pending", median(domP) != null ? fmt(median(domP)) + " d" : "—", domP.length ? `${n(domP)} observed` : "not yet observed")}
+    ${kv("days to contract, sold", median(domS) != null ? fmt(median(domS)) + " d" : "—", n(domS))}
+    ${kv("sale vs asking", s2l.length ? (median(s2l) > 0 ? "+" : "") + fmt(median(s2l), 1) + "%" : "—",
+         s2l.length ? `${pct(above, s2l.length)} over · ${pct(at, s2l.length)} at · ${pct(s2l.length - above - at, s2l.length)} under (${n(s2l)})` : "no list prices")}
+    ${kv("price cuts", active.length ? pct(cuts.length, active.length) : "—",
+         cuts.length ? `median −${fmt(-median(cuts.map(p => p.price_change_pct)), 1)}% (seen since Aug 28)` : "of actives, seen since Aug 28")}
+  </div>`;
+
+  const chart = (title, svg) => `<div class="mkt-chart"><div class="mkt-title">${title}</div>${svg}</div>`;
+  if (ppsfA.length + ppsfS.length >= 5) {
+    const all = [...ppsfA, ...ppsfS].sort((a, b) => a - b);
+    const lo = Math.floor(quantile(all, 0.02) / 10) * 10, hi = Math.max(lo + 100, Math.ceil(quantile(all, 0.98) / 10) * 10);
+    const step = Math.max(5, Math.ceil((hi - lo) / 18 / 5) * 5);
+    html += chart(`price per sqft · <i style="color:${LISTING_COLOR}">asking</i> vs <i style="color:${SOLD_COLOR}">sold</i>`,
+      histSVG([{ values: ppsfA, color: LISTING_COLOR, label: "asking" },
+               { values: ppsfS, color: SOLD_COLOR, label: "sold" }],
+              { lo, hi: lo + step * Math.ceil((hi - lo) / step), step, tick: v => "$" + Math.round(v) }));
+  }
+  if (s2l.length >= 5) {
+    html += chart(`sale price vs asking · <i style="color:#006300">under</i> / <i style="color:#d03b3b">over</i>`,
+      histSVG([{ values: s2l, label: "sold", color: a => a < 0 ? "#006300" : a >= 1 ? "#d03b3b" : "#898781" }],
+              { lo: -16, hi: 16, step: 1, tick: v => (v > 0 ? "+" : "") + Math.round(v) + "%" }));
+  }
+  if (domA.length + domS.length >= 5) {
+    html += chart(`days on market · <i style="color:${LISTING_COLOR}">active</i> vs <i style="color:${SOLD_COLOR}">sold (to contract)</i>`,
+      histSVG([{ values: domA, color: LISTING_COLOR, label: "active" },
+               { values: domS, color: SOLD_COLOR, label: "sold" }],
+              { lo: 0, hi: 168, step: 7, tick: v => Math.round(v) + "" }));
+  }
+  if (active.length >= 5) {
+    const pr = active.map(p => p.price).sort((a, b) => a - b);
+    const lo = Math.floor(quantile(pr, 0.02) / 25000) * 25000, hi = Math.ceil(quantile(pr, 0.98) / 25000) * 25000;
+    const step = Math.max(10000, Math.ceil((hi - lo) / 16 / 10000) * 10000);
+    html += chart(`asking price · <i style="color:${LISTING_COLOR}">active</i> vs <i style="color:${SOLD_COLOR}">sold</i>`,
+      histSVG([{ values: pr, color: LISTING_COLOR, label: "asking" },
+               { values: S.map(p => p.price), color: SOLD_COLOR, label: "sold" }],
+              { lo, hi: lo + step * Math.ceil((hi - lo) / step), step, tick: v => "$" + Math.round(v / 1000) + "k" }));
+  }
+  out.innerHTML = html;
 }
 
 /* ---------- dynamic commute destination ---------- */
@@ -1129,7 +1330,7 @@ async function openDeepLink() {
   if (hp) setTaxHome(bgIndex.get(hp.GEOID));
   if (!HASH.p) return;
   const url = decodeURIComponent(HASH.p);
-  for (const file of ["tiles/listings.geojson?v=1789868727" + DEVQ, "tiles/sold.geojson?v=1789868727" + DEVQ]) {
+  for (const file of ["tiles/listings.geojson?v=1789878791" + DEVQ, "tiles/sold.geojson?v=1789878791" + DEVQ]) {
     const fc = await fetch(file).then(r => r.ok ? r.json() : null).catch(() => null);
     const f = fc?.features.find(x => x.properties.url === url);
     if (f) {
@@ -1175,6 +1376,8 @@ function popupListing(lngLat, p) {
     ${p.lot_sqft ? " · " + (p.lot_sqft / 43560).toFixed(2) + " ac lot" : ""} · ${p.ptype ?? ""}
     ${p.sqft && p.price ? "<br><b>$" + Math.round(p.price / p.sqft).toLocaleString() + "/sqft</b>" : ""}<br>
     built ${p.year_built ?? "—"} · ${p.status === "sold" ? fmt(p.days_since_sold) + " days ago" : fmt(p.days_on_market) + " days on market"}
+    ${p.status === "sold" && p.list_price ? `<br>asked ${money(p.list_price)}${p.orig_price && p.orig_price !== p.list_price ? ` (first ${money(p.orig_price)})` : ""} · <b style="color:${p.sale_to_list > 0 ? "#d03b3b" : p.sale_to_list < 0 ? "#006300" : "#52514e"}">${p.sale_to_list > 0 ? "+" : ""}${fmt(p.sale_to_list, 1)}%</b>${p.dom != null ? ` · ${fmt(p.dom)} days to contract` : ""}` : ""}
+    ${p.status !== "sold" && p.days_to_pending != null ? `<br>under contract after ${fmt(p.days_to_pending)} days` : ""}
     ${p.price_changed ? `<br><b style="color:${p.price_change_pct < 0 ? "#006300" : "#d03b3b"}">${p.price_change_pct < 0 ? "▼" : "▲"} ${Math.abs(p.price_change_pct)}%</b> on ${p.price_changed}` : ""}<br>
     <a href="${p.url}" target="_blank" rel="noopener">listing ↗ (${p.source})</a>
     &nbsp;·&nbsp; <button class="share-btn" onclick="shareListing('${shareId}')">Share ⇪</button>
