@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "1789911738";  // replaced with the publish timestamp by publish.sh
+const BUILD = "1789922715";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -145,7 +145,7 @@ const baseCommute = new Map();  // GEOID -> baked Glenn values (for reset)
 
 map.on("load", async () => {
   /* block groups (choropleth base) */
-  bgData = await (await fetch("tiles/blockgroups.geojson?v=1789911738" + DEVQ)).json();
+  bgData = await (await fetch("tiles/blockgroups.geojson?v=1789922715" + DEVQ)).json();
   for (const f of bgData.features) {
     const p = f.properties;
     bgIndex.set(p.GEOID, p);
@@ -154,11 +154,11 @@ map.on("load", async () => {
       s_car: p.s_car, s_transit: p.s_transit, s_bike: p.s_bike,
     });
   }
-  bgOrder = await fetch("tiles/bg_order.json?v=1789911738" + DEVQ)
+  bgOrder = await fetch("tiles/bg_order.json?v=1789922715" + DEVQ)
     .then(r => r.ok ? r.json() : null).catch(() => null);
-  taxProfiles = await fetch("tiles/tax_profiles.json?v=1789911738" + DEVQ)
+  taxProfiles = await fetch("tiles/tax_profiles.json?v=1789922715" + DEVQ)
     .then(r => r.ok ? r.json() : null).catch(() => null);
-  trafficProfiles = await fetch("tiles/traffic_profiles.json?v=1789911738" + DEVQ)
+  trafficProfiles = await fetch("tiles/traffic_profiles.json?v=1789922715" + DEVQ)
     .then(r => r.ok ? r.json() : null).catch(() => null);
   const CATS = ["white", "black", "hispanic", "asian", "multi", "other"];
   for (const f of bgData.features) {
@@ -224,7 +224,7 @@ map.on("load", async () => {
   }, firstLabelLayer());
 
   /* county outline for orientation */
-  map.addSource("counties", { type: "geojson", data: "tiles/counties.geojson?v=1789911738" + DEVQ });
+  map.addSource("counties", { type: "geojson", data: "tiles/counties.geojson?v=1789922715" + DEVQ });
   map.addLayer({
     id: "county-line", type: "line", source: "counties",
     paint: { "line-color": "#52514e", "line-width": 1, "line-dasharray": [3, 2] },
@@ -246,7 +246,7 @@ map.on("load", async () => {
     }, firstLabelLayer());
   }
 
-  map.addSource("crimetrend", { type: "geojson", data: "tiles/crime_trend.geojson?v=1789911738" + DEVQ });
+  map.addSource("crimetrend", { type: "geojson", data: "tiles/crime_trend.geojson?v=1789922715" + DEVQ });
   map.addLayer({
     id: "crimetrend", type: "fill", source: "crimetrend",
     layout: { visibility: "none" },
@@ -305,13 +305,13 @@ map.on("load", async () => {
     },
   }, firstLabelLayer());
 
-  map.addSource("parks", { type: "geojson", data: "tiles/parks.geojson?v=1789911738" + DEVQ });
+  map.addSource("parks", { type: "geojson", data: "tiles/parks.geojson?v=1789922715" + DEVQ });
   map.addLayer({
     id: "parks", type: "fill", source: "parks",
     paint: { "fill-color": "#008300", "fill-opacity": 0.35 },
   }, firstLabelLayer());
 
-  map.addSource("amenities", { type: "geojson", data: "tiles/amenities.geojson?v=1789911738" + DEVQ });
+  map.addSource("amenities", { type: "geojson", data: "tiles/amenities.geojson?v=1789922715" + DEVQ });
   map.addLayer({
     id: "amenities", type: "circle", source: "amenities", minzoom: 11,
     paint: {
@@ -323,7 +323,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("grocery", { type: "geojson", data: "tiles/grocery.geojson?v=1789911738" + DEVQ });
+  map.addSource("grocery", { type: "geojson", data: "tiles/grocery.geojson?v=1789922715" + DEVQ });
   map.addLayer({
     id: "grocery", type: "circle", source: "grocery",
     paint: {
@@ -347,7 +347,7 @@ map.on("load", async () => {
              "text-halo-width": 1.2 },
   });
 
-  map.addSource("worship", { type: "geojson", data: "tiles/worship.geojson?v=1789911738" + DEVQ });
+  map.addSource("worship", { type: "geojson", data: "tiles/worship.geojson?v=1789922715" + DEVQ });
   map.addLayer({
     id: "worship", type: "circle", source: "worship", minzoom: 10,
     paint: {
@@ -359,7 +359,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("stripclubs", { type: "geojson", data: "tiles/stripclubs.geojson?v=1789911738" + DEVQ });
+  map.addSource("stripclubs", { type: "geojson", data: "tiles/stripclubs.geojson?v=1789922715" + DEVQ });
   map.loadImage("lib/bunny.png").then((img) => {
     if (!map.hasImage("bunny")) map.addImage("bunny", img.data);
     map.addLayer({
@@ -378,7 +378,7 @@ map.on("load", async () => {
     applyOverlays();
   }).catch(() => {});
 
-  map.addSource("housing", { type: "geojson", data: "tiles/housing.geojson?v=1789911738" + DEVQ });
+  map.addSource("housing", { type: "geojson", data: "tiles/housing.geojson?v=1789922715" + DEVQ });
   // radius grows with units (log-ish): a scattered-site house stays a dot,
   // a 200-unit tower reads as a blob; public housing drawn on top.
   const unitR = (lo, hi) => ["interpolate", ["linear"], ["sqrt", ["coalesce", ["get", "units"], 1]],
@@ -407,7 +407,7 @@ map.on("load", async () => {
     paint: { "text-color": "#7a0f5c", "text-halo-color": "#fcfcfb", "text-halo-width": 1.2 },
   });
 
-  map.addSource("districts", { type: "geojson", data: "tiles/school_districts.geojson?v=1789911738" + DEVQ });
+  map.addSource("districts", { type: "geojson", data: "tiles/school_districts.geojson?v=1789922715" + DEVQ });
   map.addLayer({
     id: "districts", type: "line", source: "districts",
     paint: { "line-color": "#52514e", "line-width": 1.2 },
@@ -421,7 +421,7 @@ map.on("load", async () => {
     paint: { "text-color": "#52514e", "text-halo-color": "#fcfcfb", "text-halo-width": 1.2 },
   });
 
-  map.addSource("listings", { type: "geojson", data: "tiles/listings.geojson?v=1789911738" + DEVQ });
+  map.addSource("listings", { type: "geojson", data: "tiles/listings.geojson?v=1789922715" + DEVQ });
   map.addLayer({
     id: "listings", type: "circle", source: "listings",
     paint: {
@@ -432,7 +432,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("sold", { type: "geojson", data: "tiles/sold.geojson?v=1789911738" + DEVQ });
+  map.addSource("sold", { type: "geojson", data: "tiles/sold.geojson?v=1789922715" + DEVQ });
   map.addLayer({
     id: "sold", type: "circle", source: "sold",
     paint: {
@@ -471,7 +471,7 @@ map.on("load", async () => {
     });
   })();
 
-  fetch("tiles/meta.json?v=1789911738" + DEVQ).then(r => r.ok ? r.json() : null).then(m => {
+  fetch("tiles/meta.json?v=1789922715" + DEVQ).then(r => r.ok ? r.json() : null).then(m => {
     if (m) $("data-stamp").textContent =
       `data as of ${m.updated} · ${m.listings.toLocaleString()} listings · ${m.sold.toLocaleString()} recent sales`
       + ` · build ${BUILD} · trend ${window.__trendCount ?? 0} areas`;
@@ -769,25 +769,33 @@ const pct = (n, d) => d ? Math.round(n / d * 100) + "%" : "—";
 
 // Grouped-bar histogram; each series is scaled to its own peak so shapes
 // compare across different sample sizes. Dashed line = that series' median.
-function histSVG(series, { lo, hi, step, tick }) {
+// Every bin is clickable (a transparent full-height hit strip per series)
+// and lists its members below the chart via showBin().
+const mktCharts = [];   // per chart: {series, bins, lo, step, tick, val}
+function histSVG(series, { lo, hi, step, tick, val }) {
   const nb = Math.round((hi - lo) / step);
   const W = 288, H = 56, B = 13;
   const bw = W / nb, k = series.length, sw = (bw - 1.2) / k;
+  const c = mktCharts.length;
+  const bins = series.map(() => Array.from({ length: nb }, () => []));
+  mktCharts.push({ series, bins, lo, step, tick, val });
   let svg = `<svg class="hist" viewBox="0 0 ${W} ${H + B}" width="100%" height="${H + B}" role="img">`;
   series.forEach((s, j) => {
-    const c = new Array(nb).fill(0);
-    for (const v of s.values) c[Math.max(0, Math.min(nb - 1, Math.floor((v - lo) / step)))]++;
-    const mx = Math.max(1, ...c);
-    c.forEach((n, i) => {
-      if (!n) return;
-      const h = Math.max(1, n / mx * (H - 3));
-      const a = lo + i * step, col = typeof s.color === "function" ? s.color(a) : s.color;
-      svg += `<rect x="${(i * bw + j * sw).toFixed(1)}" y="${(H - h).toFixed(1)}" width="${sw.toFixed(1)}" height="${h.toFixed(1)}" fill="${col}" opacity="${s.opacity ?? 1}"><title>${s.label} ${tick(a)}–${tick(a + step)}: ${n}</title></rect>`;
+    for (const it of s.items) bins[j][Math.max(0, Math.min(nb - 1, Math.floor((it.v - lo) / step)))].push(it);
+    const mx = Math.max(1, ...bins[j].map(b => b.length));
+    bins[j].forEach((b, i) => {
+      const x = (i * bw + j * sw).toFixed(1), a = lo + i * step;
+      const col = typeof s.color === "function" ? s.color(a) : s.color;
+      if (b.length) {
+        const h = Math.max(1, b.length / mx * (H - 3));
+        svg += `<rect class="bar" x="${x}" y="${(H - h).toFixed(1)}" width="${sw.toFixed(1)}" height="${h.toFixed(1)}" fill="${col}"/>`;
+      }
+      svg += `<rect class="hit" data-c="${c}" data-s="${j}" data-i="${i}" x="${x}" y="0" width="${sw.toFixed(1)}" height="${H}" fill="transparent"><title>${s.label} ${tick(a)}–${tick(a + step)}: ${b.length}${b.length ? " (click to list)" : ""}</title></rect>`;
     });
-    const m = median(s.values);
+    const m = median(s.items.map(it => it.v));
     if (m != null) {
       const x = Math.max(0, Math.min(1, (m - lo) / (hi - lo))) * W;
-      svg += `<line x1="${x.toFixed(1)}" y1="0" x2="${x.toFixed(1)}" y2="${H}" stroke="${typeof s.color === "function" ? "#0b0b0b" : s.color}" stroke-width="1.2" stroke-dasharray="2 2"/>`;
+      svg += `<line x1="${x.toFixed(1)}" y1="0" x2="${x.toFixed(1)}" y2="${H}" stroke="${typeof s.color === "function" ? "#0b0b0b" : s.color}" stroke-width="1.2" stroke-dasharray="2 2" pointer-events="none"/>`;
     }
   });
   svg += `<line x1="0" y1="${H}" x2="${W}" y2="${H}" stroke="#c9c8c0" stroke-width="1"/>`;
@@ -798,7 +806,53 @@ function histSVG(series, { lo, hi, step, tick }) {
     svg += `<text x="${(i * bw).toFixed(1)}" y="${H + B - 2}" font-size="9" fill="#898781" text-anchor="${i === 0 ? "start" : "middle"}">${tick(lo + i * step)}</text>`;
   }
   svg += `<text x="${W}" y="${H + B - 2}" font-size="9" fill="#898781" text-anchor="end">${tick(hi)}+</text>`;
-  return svg + "</svg>";
+  return svg + `</svg><div class="mkt-list" data-c="${c}" hidden></div>`;
+}
+
+function showBin(c, j, i) {
+  const ch = mktCharts[c];
+  if (!ch) return;
+  const box = document.querySelector(`.mkt-list[data-c="${c}"]`);
+  const svg = box.previousElementSibling;
+  const items = [...ch.bins[j][i]].sort((a, b) => a.v - b.v);
+  svg.querySelectorAll(".hit.sel").forEach(e => e.classList.remove("sel"));
+  const same = box.dataset.sel === `${j}:${i}`;
+  box.dataset.sel = same ? "" : `${j}:${i}`;
+  if (same || !items.length) { box.hidden = true; return; }
+  svg.querySelector(`.hit[data-s="${j}"][data-i="${i}"]`).classList.add("sel");
+  const a = ch.lo + i * ch.step, top = i === ch.bins[j].length - 1 ? "+" : `–${ch.tick(a + ch.step)}`;
+  const s = ch.series[j];
+  const row = it => {
+    const p = it.p;
+    const st = p.status === "sold" ? `sold ${p.sold_date ?? ""}` : (p.status && p.status !== "active") ? p.status : "active";
+    const link = p.url ? `<a href="${p.url}" target="_blank" rel="noopener">${p.address ?? "?"} ↗</a>` : (p.address ?? "?");
+    return `<div class="mkt-item"><b>${ch.val(it.v)}</b> <span class="mkt-addr">${link}<small>${p.city ?? ""} · ${money(p.price)} · ${fmt(p.beds)} bd ${fmt(p.baths)} ba ${p.sqft ? (+p.sqft).toLocaleString() + " sqft" : ""} · ${st}</small></span><button class="mkt-go" data-c="${c}" data-s="${j}" data-i="${i}" data-k="${it.k}" title="show on map">⌖</button></div>`;
+  };
+  box.innerHTML = `<div class="mkt-list-head"><span>${s.label} ${ch.tick(a)}${top} · ${items.length} ${items.length === 1 ? "listing" : "listings"}</span><button class="mkt-close" data-c="${c}" title="close">×</button></div>` + items.map(row).join("");
+  box.hidden = false;
+}
+
+function marketOutClick(ev) {
+  const hit = ev.target.closest(".hit");
+  if (hit) { showBin(+hit.dataset.c, +hit.dataset.s, +hit.dataset.i); return; }
+  const go = ev.target.closest(".mkt-go");
+  if (go) {
+    const it = mktCharts[+go.dataset.c].bins[+go.dataset.s][+go.dataset.i].find(x => x.k === +go.dataset.k);
+    if (!it) return;
+    // turn on the layer the house lives in so the dot is there under the popup
+    const ov = OVERLAYS.find(o => o.id === (it.p.status === "sold" ? "sold" : "listings"));
+    if (ov && !ov.on) { ov.on = true; const cb = document.querySelectorAll("#overlays .orow input")[OVERLAYS.indexOf(ov)]; if (cb) cb.checked = true; applyOverlays(); }
+    map.flyTo({ center: it.ll, zoom: Math.max(map.getZoom(), 15), duration: 900 });
+    map.once("moveend", () => popupListing({ lng: it.ll[0], lat: it.ll[1] }, it.p));
+    if (matchMedia("(max-width: 640px)").matches) $("panel").classList.add("hidden");
+    return;
+  }
+  const close = ev.target.closest(".mkt-close");
+  if (close) {
+    const box = document.querySelector(`.mkt-list[data-c="${close.dataset.c}"]`);
+    box.hidden = true; box.dataset.sel = "";
+    box.previousElementSibling.querySelectorAll(".hit.sel").forEach(e => e.classList.remove("sel"));
+  }
 }
 
 function buildCityOptions() {
@@ -822,14 +876,16 @@ async function loadMarketData() {
   try {
     const [l, s] = await Promise.all(["listings", "sold"].map(n =>
       fetch(`tiles/${n}.geojson` + DEVQ).then(r => r.ok ? r.json() : { features: [] })));
+    let k = 0;
     const wrap = fc => fc.features.map(f => ({
-      p: f.properties, city: cityNorm(f.properties.city), ll: f.geometry.coordinates }));
+      p: f.properties, city: cityNorm(f.properties.city), ll: f.geometry.coordinates, k: k++ }));
     mktData = { listings: wrap(l), sold: wrap(s) };
   } catch (e) {
     console.warn("market data", e);
     mktData = { listings: [], sold: [] };
   }
   buildCityOptions();
+  $("market-out").addEventListener("click", marketOutClick);
   marketInsights();
 }
 
@@ -843,75 +899,79 @@ function marketInsights() {
   const bounds = city === "__view" ? map.getBounds() : null;
   const inScope = r => city === "" ? true
     : city === "__view" ? bounds.contains(r.ll) : r.city === city;
-  const L = mktData.listings.filter(r => inScope(r) && evalExpr(fl, r.p)).map(r => r.p);
-  const S = mktData.sold.filter(r => inScope(r) && evalExpr(g, r.p)).map(r => r.p);
+  const L = mktData.listings.filter(r => inScope(r) && evalExpr(fl, r.p));
+  const S = mktData.sold.filter(r => inScope(r) && evalExpr(g, r.p));
   const soldwin = +$("soldwin").value;
 
-  const active = L.filter(p => !p.status || p.status === "active");
-  const cont = L.filter(p => p.status === "contingent");
-  const pend = L.filter(p => p.status === "pending");
-  const ppsf = rows => rows.filter(p => p.sqft > 0 && p.price / p.sqft > 10 && p.price / p.sqft < 1500)
-                           .map(p => p.price / p.sqft);
+  const active = L.filter(r => !r.p.status || r.p.status === "active");
+  const cont = L.filter(r => r.p.status === "contingent");
+  const pend = L.filter(r => r.p.status === "pending");
+  // items = {v, p, ll, k} so histogram bins can list and locate their members
+  const pick = (rows, fn) => rows.map(r => ({ v: fn(r.p), p: r.p, ll: r.ll, k: r.k })).filter(it => it.v != null);
+  const vals = items => items.map(it => it.v);
+  const ppsf = rows => pick(rows, p => p.sqft > 0 && p.price / p.sqft > 10 && p.price / p.sqft < 1500 ? p.price / p.sqft : null);
   const ppsfA = ppsf(active), ppsfS = ppsf(S);
-  const domA = active.map(p => p.days_on_market).filter(v => v != null);
-  const domP = [...cont, ...pend].map(p => p.days_to_pending).filter(v => v != null);
-  const domS = S.map(p => p.dom).filter(v => v != null);
-  const s2l = S.map(p => p.sale_to_list).filter(v => v != null);
-  const above = s2l.filter(v => v > 0).length, at = s2l.filter(v => v === 0).length;
-  const cuts = active.filter(p => p.price_change_pct < 0);
-  const newWeek = active.filter(p => p.days_on_market != null && p.days_on_market <= 7).length;
+  const domA = pick(active, p => p.days_on_market);
+  const domP = pick([...cont, ...pend], p => p.days_to_pending);
+  const domS = pick(S, p => p.dom);
+  const s2l = pick(S, p => p.sale_to_list);
+  const above = s2l.filter(it => it.v > 0).length, at = s2l.filter(it => it.v === 0).length;
+  const cuts = active.filter(r => r.p.price_change_pct < 0);
+  const newWeek = active.filter(r => r.p.days_on_market != null && r.p.days_on_market <= 7).length;
   const perMonth = S.length / soldwin * 30.4;
   const supply = perMonth > 0 ? active.length / perMonth : null;
 
   const kv = (k, v, note = "") => `<div class="mkt-row"><span>${k}</span><b>${v}</b>${note ? `<i>${note}</i>` : ""}</div>`;
   const n = (arr) => `n=${arr.length}`;
+  mktCharts.length = 0;
   if (!L.length && !S.length) { out.innerHTML = `<div class="note">nothing matches the current filters here</div>`; return; }
   let html = `<div class="mkt-grid">
     ${kv("active", active.length.toLocaleString(), newWeek ? `${newWeek} new this week` : "")}
     ${kv("contingent / pending", `${cont.length} / ${pend.length}`)}
     ${kv(`sold, last ${soldwin} d`, S.length.toLocaleString(), supply != null && active.length ? `${supply.toFixed(1)} months of supply` : "")}
-    ${kv("median asking", money(median(active.map(p => p.price))), n(active))}
-    ${kv("median sold", money(median(S.map(p => p.price))), n(S))}
-    ${kv("asking $/sqft", money(median(ppsfA)), n(ppsfA))}
-    ${kv("sold $/sqft", money(median(ppsfS)), n(ppsfS))}
-    ${kv("days on market", median(domA) != null ? fmt(median(domA)) + " d" : "—", "active listings, median")}
-    ${kv("days to pending", median(domP) != null ? fmt(median(domP)) + " d" : "—", domP.length ? `${n(domP)} observed` : "not yet observed")}
-    ${kv("days to contract, sold", median(domS) != null ? fmt(median(domS)) + " d" : "—", n(domS))}
-    ${kv("sale vs asking", s2l.length ? (median(s2l) > 0 ? "+" : "") + fmt(median(s2l), 1) + "%" : "—",
+    ${kv("median asking", money(median(active.map(r => r.p.price))), n(active))}
+    ${kv("median sold", money(median(S.map(r => r.p.price))), n(S))}
+    ${kv("asking $/sqft", money(median(vals(ppsfA))), n(ppsfA))}
+    ${kv("sold $/sqft", money(median(vals(ppsfS))), n(ppsfS))}
+    ${kv("days on market", domA.length ? fmt(median(vals(domA))) + " d" : "—", "active listings, median")}
+    ${kv("days to pending", domP.length ? fmt(median(vals(domP))) + " d" : "—", domP.length ? `${n(domP)} observed` : "not yet observed")}
+    ${kv("days to contract, sold", domS.length ? fmt(median(vals(domS))) + " d" : "—", n(domS))}
+    ${kv("sale vs asking", s2l.length ? (median(vals(s2l)) > 0 ? "+" : "") + fmt(median(vals(s2l)), 1) + "%" : "—",
          s2l.length ? `${pct(above, s2l.length)} over · ${pct(at, s2l.length)} at · ${pct(s2l.length - above - at, s2l.length)} under (${n(s2l)})` : "no list prices")}
     ${kv("price cuts", active.length ? pct(cuts.length, active.length) : "—",
-         cuts.length ? `median −${fmt(-median(cuts.map(p => p.price_change_pct)), 1)}% (seen since Aug 28)` : "of actives, seen since Aug 28")}
+         cuts.length ? `median −${fmt(-median(cuts.map(r => r.p.price_change_pct)), 1)}% (seen since Aug 28)` : "of actives, seen since Aug 28")}
   </div>`;
 
   const chart = (title, svg) => `<div class="mkt-chart"><div class="mkt-title">${title}</div>${svg}</div>`;
   if (ppsfA.length + ppsfS.length >= 5) {
-    const all = [...ppsfA, ...ppsfS].sort((a, b) => a - b);
+    const all = [...vals(ppsfA), ...vals(ppsfS)].sort((a, b) => a - b);
     const lo = Math.floor(quantile(all, 0.02) / 10) * 10, hi = Math.max(lo + 100, Math.ceil(quantile(all, 0.98) / 10) * 10);
     const step = Math.max(5, Math.ceil((hi - lo) / 18 / 5) * 5);
     html += chart(`price per sqft · <i style="color:${LISTING_COLOR}">asking</i> vs <i style="color:${SOLD_COLOR}">sold</i>`,
-      histSVG([{ values: ppsfA, color: LISTING_COLOR, label: "asking" },
-               { values: ppsfS, color: SOLD_COLOR, label: "sold" }],
-              { lo, hi: lo + step * Math.ceil((hi - lo) / step), step, tick: v => "$" + Math.round(v) }));
+      histSVG([{ items: ppsfA, color: LISTING_COLOR, label: "asking" },
+               { items: ppsfS, color: SOLD_COLOR, label: "sold" }],
+              { lo, hi: lo + step * Math.ceil((hi - lo) / step), step, tick: v => "$" + Math.round(v), val: v => "$" + Math.round(v) + "/sqft" }));
   }
   if (s2l.length >= 5) {
     html += chart(`sale price vs asking · <i style="color:#006300">under</i> / <i style="color:#d03b3b">over</i>`,
-      histSVG([{ values: s2l, label: "sold", color: a => a < 0 ? "#006300" : a >= 1 ? "#d03b3b" : "#898781" }],
-              { lo: -16, hi: 16, step: 1, tick: v => (v > 0 ? "+" : "") + Math.round(v) + "%" }));
+      histSVG([{ items: s2l, label: "sold", color: a => a < 0 ? "#006300" : a >= 1 ? "#d03b3b" : "#898781" }],
+              { lo: -16, hi: 16, step: 1, tick: v => (v > 0 ? "+" : "") + Math.round(v) + "%", val: v => (v > 0 ? "+" : "") + fmt(v, 1) + "%" }));
   }
   if (domA.length + domS.length >= 5) {
     html += chart(`days on market · <i style="color:${LISTING_COLOR}">active</i> vs <i style="color:${SOLD_COLOR}">sold (to contract)</i>`,
-      histSVG([{ values: domA, color: LISTING_COLOR, label: "active" },
-               { values: domS, color: SOLD_COLOR, label: "sold" }],
-              { lo: 0, hi: 168, step: 7, tick: v => Math.round(v) + "" }));
+      histSVG([{ items: domA, color: LISTING_COLOR, label: "active" },
+               { items: domS, color: SOLD_COLOR, label: "sold" }],
+              { lo: 0, hi: 168, step: 7, tick: v => Math.round(v) + "", val: v => fmt(v) + " d" }));
   }
   if (active.length >= 5) {
-    const pr = active.map(p => p.price).sort((a, b) => a - b);
-    const lo = Math.floor(quantile(pr, 0.02) / 25000) * 25000, hi = Math.ceil(quantile(pr, 0.98) / 25000) * 25000;
+    const pr = pick(active, p => p.price), prS = pick(S, p => p.price);
+    const sorted = vals(pr).sort((a, b) => a - b);
+    const lo = Math.floor(quantile(sorted, 0.02) / 25000) * 25000, hi = Math.ceil(quantile(sorted, 0.98) / 25000) * 25000;
     const step = Math.max(10000, Math.ceil((hi - lo) / 16 / 10000) * 10000);
     html += chart(`asking price · <i style="color:${LISTING_COLOR}">active</i> vs <i style="color:${SOLD_COLOR}">sold</i>`,
-      histSVG([{ values: pr, color: LISTING_COLOR, label: "asking" },
-               { values: S.map(p => p.price), color: SOLD_COLOR, label: "sold" }],
-              { lo, hi: lo + step * Math.ceil((hi - lo) / step), step, tick: v => "$" + Math.round(v / 1000) + "k" }));
+      histSVG([{ items: pr, color: LISTING_COLOR, label: "asking" },
+               { items: prS, color: SOLD_COLOR, label: "sold" }],
+              { lo, hi: lo + step * Math.ceil((hi - lo) / step), step, tick: v => "$" + Math.round(v / 1000) + "k", val: v => money(v) }));
   }
   out.innerHTML = html;
 }
@@ -1330,7 +1390,7 @@ async function openDeepLink() {
   if (hp) setTaxHome(bgIndex.get(hp.GEOID));
   if (!HASH.p) return;
   const url = decodeURIComponent(HASH.p);
-  for (const file of ["tiles/listings.geojson?v=1789911738" + DEVQ, "tiles/sold.geojson?v=1789911738" + DEVQ]) {
+  for (const file of ["tiles/listings.geojson?v=1789922715" + DEVQ, "tiles/sold.geojson?v=1789922715" + DEVQ]) {
     const fc = await fetch(file).then(r => r.ok ? r.json() : null).catch(() => null);
     const f = fc?.features.find(x => x.properties.url === url);
     if (f) {

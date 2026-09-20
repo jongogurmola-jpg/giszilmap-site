@@ -122,3 +122,20 @@ select { width: 100%; padding: 5px; font-size: 13px; }
 .mkt-title { font-size: 11px; color: #52514e; margin-bottom: 1px; }
 .mkt-title i { font-style: normal; font-weight: 600; }
 .hist { display: block; }
+.hist .hit { cursor: pointer; }
+.hist .hit:hover { fill: rgba(11,11,11,0.08); }
+.hist .hit.sel { fill: rgba(74,58,167,0.18); }
+.mkt-list { margin: 4px 0 6px; padding: 6px 8px; border: 1px solid #e1e0d9; border-radius: 6px;
+            background: #f7f6f2; font-size: 11.5px; max-height: 260px; overflow-y: auto; }
+.mkt-list-head { display: flex; justify-content: space-between; align-items: center; gap: 6px;
+                 font-weight: 600; color: #52514e; margin-bottom: 4px; }
+.mkt-close { border: 0; background: none; font-size: 16px; line-height: 1; cursor: pointer; color: #898781; padding: 0 2px; }
+.mkt-item { display: flex; align-items: center; gap: 6px; padding: 3px 0; border-top: 1px solid #e9e8e2; }
+.mkt-item > b { flex: 0 0 5.2em; color: #0b0b0b; font-variant-numeric: tabular-nums; }
+.mkt-addr { flex: 1; min-width: 0; line-height: 1.3; }
+.mkt-addr a { color: #4a3aa7; text-decoration: none; }
+.mkt-addr a:hover { text-decoration: underline; }
+.mkt-addr small { display: block; color: #898781; font-size: 10.5px; }
+.mkt-go { flex: 0 0 auto; border: 1px solid #d6d5cd; background: #fcfcfb; border-radius: 4px; cursor: pointer;
+          font-size: 13px; line-height: 1; padding: 2px 5px; color: #52514e; }
+.mkt-go:hover { background: #ebe9e2; color: #0b0b0b; }
