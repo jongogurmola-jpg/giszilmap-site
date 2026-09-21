@@ -1,0 +1,50 @@
+{
+ "scorecard": {
+  "n_pairs": 430,
+  "median_err_pct": 6.11,
+  "mean_err_pct": 7.36,
+  "p90_err_pct": 16.06,
+  "bias_pct": -0.24,
+  "within_10pct": 72.6,
+  "median_lead_days": 14,
+  "first_sale": "2026-08-20",
+  "last_sale": "2026-09-18",
+  "auc_above_asking": 0.785,
+  "auc_n": 223,
+  "auc_base_rate": 0.682,
+  "called_cheap_sold_vs_ask_pct": 4.24,
+  "called_dear_sold_vs_ask_pct": 0.0,
+  "signal_spread_pp": 4.24,
+  "holdout_median_err_pct": 5.84,
+  "live_vs_holdout_ratio": 1.05,
+  "status": "ok",
+  "mode": "backfill \u2014 live log has 0 of 30 pairs so far",
+  "live_log": {
+   "n_pairs": 0
+  }
+ },
+ "model": {
+  "trained_on": 1979,
+  "r2_log": 0.869,
+  "median_abs_err_pct": 5.84,
+  "mean_abs_err_pct": 7.01,
+  "scored_active": 782,
+  "asking_premium_pct": -0.6,
+  "era_floor_pct": {
+   "<1920": 6.67,
+   "1920-49": 6.18,
+   "1950-79": 6.12,
+   "1980-2009": 5.27,
+   "2010+": 5.78
+  },
+  "era_Q_over_df": 4.64,
+  "city_Q_over_df": 1.14,
+  "city_factor_range": [
+   0.949,
+   1.051
+  ],
+  "segment": "ppsf:190-300,price:250000-600000",
+  "ptype": "single"
+ },
+ "written": "2026-09-20 21:14"
+}
