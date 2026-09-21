@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "1790009321";  // replaced with the publish timestamp by publish.sh
+const BUILD = "1790012198";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -37,6 +37,13 @@ const VALUE_OVER = "#d7301f";      // asking above model value
 const VALUE_NEUTRAL = "#c9b45a";   // within the model's own error band
 const VALUE_UNSCORED = "#b8b6b0";  // pending, or outside the modelled segment
 let valMeta = null;                // {n, mae, segment, asof} read off valuation.geojson
+// houses-to-watch layer (p26): one colour per reason, in the author's priority order
+const WATCH = {
+  move_fast:   { color: "#d7301f", label: "likely under contract within a week", short: "move fast" },
+  cut_likely:  { color: "#e6a100", label: "likely to cut price within a week",   short: "cut likely" },
+  room:        { color: "#13a08f", label: "room to negotiate below asking",       short: "room below asking" },
+  below_model: { color: "#9a9890", label: "asks under the value model for what it is (weakest signal — mostly what the model can't see)", short: "under model" },
+};
 const CRIME_COLORS = { violent: "#d03b3b", property: "#898781" };
 
 /* ---------- metric registry ---------- */
@@ -81,6 +88,7 @@ const PTYPE_CATS = {
 /* ---------- overlays ---------- */
 const OVERLAYS = [
   { id: "listings",  label: "Listings",           color: LISTING_COLOR, on: true },
+  { id: "watch",     label: "Houses to watch",     color: WATCH.move_fast.color, on: false },
   { id: "value",     label: "Asking vs model value", color: VALUE_UNDER, on: false },
   { id: "sold",      label: "Recently sold",      color: SOLD_COLOR, on: false },
   { id: "racedots",  label: "Racial dot map",     color: DOT_COLORS.white, on: false },
@@ -152,7 +160,7 @@ const baseCommute = new Map();  // GEOID -> baked Glenn values (for reset)
 
 map.on("load", async () => {
   /* block groups (choropleth base) */
-  bgData = await (await fetch("tiles/blockgroups.geojson?v=1790009321" + DEVQ)).json();
+  bgData = await (await fetch("tiles/blockgroups.geojson?v=1790012198" + DEVQ)).json();
   for (const f of bgData.features) {
     const p = f.properties;
     bgIndex.set(p.GEOID, p);
@@ -161,11 +169,11 @@ map.on("load", async () => {
       s_car: p.s_car, s_transit: p.s_transit, s_bike: p.s_bike,
     });
   }
-  bgOrder = await fetch("tiles/bg_order.json?v=1790009321" + DEVQ)
+  bgOrder = await fetch("tiles/bg_order.json?v=1790012198" + DEVQ)
     .then(r => r.ok ? r.json() : null).catch(() => null);
-  taxProfiles = await fetch("tiles/tax_profiles.json?v=1790009321" + DEVQ)
+  taxProfiles = await fetch("tiles/tax_profiles.json?v=1790012198" + DEVQ)
     .then(r => r.ok ? r.json() : null).catch(() => null);
-  trafficProfiles = await fetch("tiles/traffic_profiles.json?v=1790009321" + DEVQ)
+  trafficProfiles = await fetch("tiles/traffic_profiles.json?v=1790012198" + DEVQ)
     .then(r => r.ok ? r.json() : null).catch(() => null);
   const CATS = ["white", "black", "hispanic", "asian", "multi", "other"];
   for (const f of bgData.features) {
@@ -231,7 +239,7 @@ map.on("load", async () => {
   }, firstLabelLayer());
 
   /* county outline for orientation */
-  map.addSource("counties", { type: "geojson", data: "tiles/counties.geojson?v=1790009321" + DEVQ });
+  map.addSource("counties", { type: "geojson", data: "tiles/counties.geojson?v=1790012198" + DEVQ });
   map.addLayer({
     id: "county-line", type: "line", source: "counties",
     paint: { "line-color": "#52514e", "line-width": 1, "line-dasharray": [3, 2] },
@@ -253,7 +261,7 @@ map.on("load", async () => {
     }, firstLabelLayer());
   }
 
-  map.addSource("crimetrend", { type: "geojson", data: "tiles/crime_trend.geojson?v=1790009321" + DEVQ });
+  map.addSource("crimetrend", { type: "geojson", data: "tiles/crime_trend.geojson?v=1790012198" + DEVQ });
   map.addLayer({
     id: "crimetrend", type: "fill", source: "crimetrend",
     layout: { visibility: "none" },
@@ -312,13 +320,13 @@ map.on("load", async () => {
     },
   }, firstLabelLayer());
 
-  map.addSource("parks", { type: "geojson", data: "tiles/parks.geojson?v=1790009321" + DEVQ });
+  map.addSource("parks", { type: "geojson", data: "tiles/parks.geojson?v=1790012198" + DEVQ });
   map.addLayer({
     id: "parks", type: "fill", source: "parks",
     paint: { "fill-color": "#008300", "fill-opacity": 0.35 },
   }, firstLabelLayer());
 
-  map.addSource("amenities", { type: "geojson", data: "tiles/amenities.geojson?v=1790009321" + DEVQ });
+  map.addSource("amenities", { type: "geojson", data: "tiles/amenities.geojson?v=1790012198" + DEVQ });
   map.addLayer({
     id: "amenities", type: "circle", source: "amenities", minzoom: 11,
     paint: {
@@ -330,7 +338,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("grocery", { type: "geojson", data: "tiles/grocery.geojson?v=1790009321" + DEVQ });
+  map.addSource("grocery", { type: "geojson", data: "tiles/grocery.geojson?v=1790012198" + DEVQ });
   map.addLayer({
     id: "grocery", type: "circle", source: "grocery",
     paint: {
@@ -354,7 +362,7 @@ map.on("load", async () => {
              "text-halo-width": 1.2 },
   });
 
-  map.addSource("worship", { type: "geojson", data: "tiles/worship.geojson?v=1790009321" + DEVQ });
+  map.addSource("worship", { type: "geojson", data: "tiles/worship.geojson?v=1790012198" + DEVQ });
   map.addLayer({
     id: "worship", type: "circle", source: "worship", minzoom: 10,
     paint: {
@@ -366,7 +374,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("stripclubs", { type: "geojson", data: "tiles/stripclubs.geojson?v=1790009321" + DEVQ });
+  map.addSource("stripclubs", { type: "geojson", data: "tiles/stripclubs.geojson?v=1790012198" + DEVQ });
   map.loadImage("lib/bunny.png").then((img) => {
     if (!map.hasImage("bunny")) map.addImage("bunny", img.data);
     map.addLayer({
@@ -385,7 +393,7 @@ map.on("load", async () => {
     applyOverlays();
   }).catch(() => {});
 
-  map.addSource("housing", { type: "geojson", data: "tiles/housing.geojson?v=1790009321" + DEVQ });
+  map.addSource("housing", { type: "geojson", data: "tiles/housing.geojson?v=1790012198" + DEVQ });
   // radius grows with units (log-ish): a scattered-site house stays a dot,
   // a 200-unit tower reads as a blob; public housing drawn on top.
   const unitR = (lo, hi) => ["interpolate", ["linear"], ["sqrt", ["coalesce", ["get", "units"], 1]],
@@ -414,7 +422,7 @@ map.on("load", async () => {
     paint: { "text-color": "#7a0f5c", "text-halo-color": "#fcfcfb", "text-halo-width": 1.2 },
   });
 
-  map.addSource("districts", { type: "geojson", data: "tiles/school_districts.geojson?v=1790009321" + DEVQ });
+  map.addSource("districts", { type: "geojson", data: "tiles/school_districts.geojson?v=1790012198" + DEVQ });
   map.addLayer({
     id: "districts", type: "line", source: "districts",
     paint: { "line-color": "#52514e", "line-width": 1.2 },
@@ -428,7 +436,7 @@ map.on("load", async () => {
     paint: { "text-color": "#52514e", "text-halo-color": "#fcfcfb", "text-halo-width": 1.2 },
   });
 
-  map.addSource("listings", { type: "geojson", data: "tiles/listings.geojson?v=1790009321" + DEVQ });
+  map.addSource("listings", { type: "geojson", data: "tiles/listings.geojson?v=1790012198" + DEVQ });
   map.addLayer({
     id: "listings", type: "circle", source: "listings",
     paint: {
@@ -439,7 +447,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("sold", { type: "geojson", data: "tiles/sold.geojson?v=1790009321" + DEVQ });
+  map.addSource("sold", { type: "geojson", data: "tiles/sold.geojson?v=1790012198" + DEVQ });
   map.addLayer({
     id: "sold", type: "circle", source: "sold",
     paint: {
@@ -448,6 +456,38 @@ map.on("load", async () => {
       "circle-stroke-color": "#fcfcfb", "circle-stroke-width": 1,
     },
   }, "listings");
+
+  /* houses to watch: p26's flagged listings, drawn on top of the dots. Colour
+     = the most urgent reason; a house with two reasons gets a dark ring. */
+  map.addSource("watch", { type: "geojson", data: "tiles/watch.geojson?v=1790012198" + DEVQ });
+  const watchColor = ["match", ["get", "watch_primary"],
+    "move_fast", WATCH.move_fast.color, "cut_likely", WATCH.cut_likely.color,
+    "room", WATCH.room.color, WATCH.below_model.color];
+  const multi = [">", ["coalesce", ["get", "watch_n_reasons"], 1], 1];
+  map.addLayer({
+    id: "watch", type: "circle", source: "watch",
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, ["case", multi, 5, 4], 12, ["case", multi, 9, 7], 15, ["case", multi, 13, 10]],
+      "circle-color": watchColor,
+      "circle-opacity": ["case", ["==", ["get", "watch_primary"], "below_model"], 0.55, 0.95],
+      "circle-stroke-color": ["case", multi, "#0b0b0b", "#fcfcfb"],
+      "circle-stroke-width": ["case", multi, 2.5, 1.5],
+    },
+  });
+  map.addLayer({
+    id: "watch-label", type: "symbol", source: "watch", minzoom: 12,
+    layout: {
+      "text-field": ["match", ["get", "watch_primary"],
+        "move_fast", ["concat", ["to-string", ["round", ["*", 100, ["get", "p_contract_7d"]]]], "% contract"],
+        "cut_likely", ["concat", ["to-string", ["round", ["*", 100, ["get", "p_cut_7d"]]]], "% cut"],
+        "room", ["concat", ["to-string", ["get", "exp_stl_pct"]], "% room"],
+        "under model"],
+      "text-font": ["Noto Sans Regular"], "text-size": 10.5, "text-offset": [0, 1.3],
+      "text-anchor": "top", "text-optional": true, "text-allow-overlap": false,
+    },
+    paint: { "text-color": ["case", ["==", ["get", "watch_primary"], "below_model"], "#7a7870", "#0b0b0b"],
+             "text-halo-color": "#fcfcfb", "text-halo-width": 1.4 },
+  });
 
   /* commute destination marker (defaults to NASA Glenn) */
   destMarker = new maplibregl.Marker({ color: "#e34948" }).setLngLat(GLENN)
@@ -478,7 +518,7 @@ map.on("load", async () => {
     });
   })();
 
-  fetch("tiles/meta.json?v=1790009321" + DEVQ).then(r => r.ok ? r.json() : null).then(m => {
+  fetch("tiles/meta.json?v=1790012198" + DEVQ).then(r => r.ok ? r.json() : null).then(m => {
     if (m) $("data-stamp").textContent =
       `data as of ${m.updated} · ${m.listings.toLocaleString()} listings · ${m.sold.toLocaleString()} recent sales`
       + ` · build ${BUILD} · trend ${window.__trendCount ?? 0} areas`;
@@ -645,11 +685,14 @@ function applyOverlays() {
 function applyValueMode() {
   if (!map.getLayer("listings")) return;
   const on = OVERLAYS.find(o => o.id === "value").on;
+  // with the watch layer up, the ordinary dots step back so the flagged houses read
+  const dim = OVERLAYS.find(o => o.id === "watch").on ? 0.35 : 1;
   if (!on) {
     map.setPaintProperty("listings", "circle-color", ["match", ["get", "status"],
       "contingent", PENDING_COLOR, "pending", PENDING_COLOR, LISTING_COLOR]);
     map.setPaintProperty("listings", "circle-radius", ["interpolate", ["linear"], ["zoom"], 8, 2.5, 12, 5, 15, 8]);
-    map.setPaintProperty("listings", "circle-opacity", 1);
+    map.setPaintProperty("listings", "circle-opacity", dim);
+    map.setPaintProperty("listings", "circle-stroke-opacity", dim);
     return;
   }
   const ex = ["get", "excess_pct"], band = ["coalesce", ["get", "local_mae_pct"], ["get", "model_mae_pct"], 6];
@@ -664,7 +707,8 @@ function applyValueMode() {
     VALUE_NEUTRAL]);
   map.setPaintProperty("listings", "circle-radius", ["interpolate", ["linear"], ["zoom"],
     8, ["*", 2.5, size], 12, ["*", 5, size], 15, ["*", 8, size]]);
-  map.setPaintProperty("listings", "circle-opacity", ["case", scored, 1, 0.5]);
+  map.setPaintProperty("listings", "circle-opacity", ["*", dim, ["case", scored, 1, 0.5]]);
+  map.setPaintProperty("listings", "circle-stroke-opacity", dim);
 }
 
 /* "ppsf:190-300,price:250000-600000" -> "$190–300/sqft, $250k–600k asking" */
@@ -678,6 +722,25 @@ function segLabel(seg) {
     if (name === "price") return `$${k(a)}–${k(b)} asking`;
     return part;
   }).join(", ");
+}
+
+/* Why a house is on p26's watch list, in the author's priority order; the
+   value-model reason last and quiet, since that gap is mostly what the model
+   cannot see. Badges for as-is remarks and full point-of-sale inspection
+   cities (escrow obligations for a buyer). */
+function watchLine(p) {
+  if (!p.watch_primary) return "";
+  const pc = v => `${Math.round(100 * v)}%`;
+  const rs = [];
+  if (p.w_move_fast) rs.push(`<b style="color:${WATCH.move_fast.color}">⚡ ${WATCH.move_fast.label}</b> (${pc(p.p_contract_7d)})`);
+  if (p.w_cut_likely) rs.push(`<b style="color:${WATCH.cut_likely.color}">✂ ${WATCH.cut_likely.label}</b> (${pc(p.p_cut_7d)})`);
+  if (p.w_room) rs.push(`<b style="color:${WATCH.room.color}">${WATCH.room.label}</b>: ${(+p.exp_stl_pct).toFixed(1)}% (${(+p.stl_lo).toFixed(1)} to ${(+p.stl_hi).toFixed(1)}%)${p.exp_room_dollars ? `, about ${money(p.exp_room_dollars)}` : ""}`);
+  if (p.w_below_model) rs.push(`<span style="color:#7a7870">${WATCH.below_model.label}</span>`);
+  const badges = [];
+  if (+p.pos_tier === 2) badges.push(`<span class="badge">point-of-sale inspection city</span>`);
+  if (+p.kw_asis === 1) badges.push(`<span class="badge">listed as-is / TLC</span>`);
+  return `<div class="hood value-pop"><b>On the watch list${p.watch_n_reasons > 1 ? ` — ${p.watch_n_reasons} reasons` : ""}</b>` +
+    rs.map(r => `<br>${r}`).join("") + (badges.length ? `<br>${badges.join(" ")}` : "") + `</div>`;
 }
 
 /* Sidebar line on the value model: what it was fit on, how well it held
@@ -994,8 +1057,19 @@ function buildCityOptions() {
 
 async function loadMarketData() {
   try {
-    const [l, s, v] = await Promise.all(["listings", "sold", "valuation"].map(n =>
+    const [l, s, v, w] = await Promise.all(["listings", "sold", "valuation", "watch"].map(n =>
       fetch(`tiles/${n}.geojson` + DEVQ).then(r => r.ok ? r.json() : { features: [] })));
+    // houses-to-watch flags onto the listing records, so either layer's popup explains why
+    if (w.features.length) {
+      const key = p => addrKey(p.address) + "|" + addrKey(p.city);
+      const wm = new Map(w.features.map(f => [key(f.properties), f.properties]));
+      const WF = ["watch_primary", "watch_n_reasons", "w_move_fast", "w_cut_likely", "w_room", "w_below_model",
+                  "exp_room_dollars", "pos_tier", "kw_asis", "exp_stl_pct", "stl_lo", "stl_hi", "exp_sale_price", "p_cut_7d", "p_contract_7d"];
+      for (const f of l.features) {
+        const m = wm.get(key(f.properties));
+        if (m) for (const c of WF) if (m[c] != null && f.properties[c] == null) f.properties[c] = m[c];
+      }
+    }
     // join the model's verdict onto the listing features (popup + value mode)
     if (v.features.length) {
       const key = p => addrKey(p.address) + "|" + addrKey(p.city);
@@ -1017,7 +1091,8 @@ async function loadMarketData() {
     }
     let k = 0;
     const wrap = fc => fc.features.map(f => ({
-      p: f.properties, city: cityNorm(f.properties.city), ll: f.geometry.coordinates, k: k++ }));
+      p: f.properties, city: cityNorm(f.properties.city), ll: f.geometry.coordinates, k: k++,
+      wk: addrKey(f.properties.address) + "|" + addrKey(f.properties.city) }));
     mktData = { listings: wrap(l), sold: wrap(s) };
   } catch (e) {
     console.warn("market data", e);
@@ -1337,6 +1412,11 @@ function legendRamp(key) {
 
 function legendDots() {
   const parts = [];
+  if (OVERLAYS.find(o => o.id === "watch").on) {
+    for (const k of ["move_fast", "cut_likely", "room", "below_model"])
+      parts.push(`<span><i style="background:${WATCH[k].color}${k === "below_model" ? ";opacity:.55" : ""}"></i>${WATCH[k].short}</span>`);
+    parts.push(`<em class="legend-note">houses to watch (single-family, $250–600k): colour = most urgent reason, dark ring = two reasons · "under model" is the weakest signal, not "underpriced"</em>`);
+  }
   const valueOn = OVERLAYS.find(o => o.id === "value").on && OVERLAYS.find(o => o.id === "listings").on;
   if (valueOn) {
     parts.push(`<span><i style="background:${VALUE_UNDER}"></i>asks below model, vs peers at its $/sqft</span>`,
@@ -1406,7 +1486,14 @@ function wirePopups() {
     const box = [[e.point.x - pad, e.point.y - pad], [e.point.x + pad, e.point.y + pad]];
     const tryLayers = (ids) => map.queryRenderedFeatures(box, { layers: ids.filter(l => map.getLayer(l)) });
 
-    let feats = tryLayers(["listings", "sold"]);
+    let feats = tryLayers(["watch"]);
+    if (feats.length && map.getLayoutProperty("watch", "visibility") === "visible") {
+      // the listing record carries everything (photo, model lines); fall back to the layer's own fields
+      const w = feats[0].properties, wk = addrKey(w.address) + "|" + addrKey(w.city);
+      const l = mktData && mktData.listings.find(r => r.wk === wk);
+      return popupListing(e.lngLat, l ? l.p : { ...w, status: "active", days_on_market: w.dom, source: "watch list" });
+    }
+    feats = tryLayers(["listings", "sold"]);
     if (feats.length) return popupListing(e.lngLat, feats[0].properties);
     feats = tryLayers(["housing"]);
     if (feats.length && map.getLayoutProperty("housing", "visibility") === "visible")
@@ -1449,7 +1536,7 @@ function wirePopups() {
       return popupScorecard(e.lngLat, props);
     }
   });
-  for (const id of ["listings", "sold", "grocery", "amenities", "worship", "housing", "traffic", "speed", "bg-fill"])
+  for (const id of ["watch", "listings", "sold", "grocery", "amenities", "worship", "housing", "traffic", "speed", "bg-fill"])
     map.on("mouseenter", id, () => map.getCanvas().style.cursor = "pointer");
 }
 
@@ -1550,7 +1637,7 @@ async function openDeepLink() {
   if (hp) setTaxHome(bgIndex.get(hp.GEOID));
   if (!HASH.p) return;
   const url = decodeURIComponent(HASH.p);
-  for (const file of ["tiles/listings.geojson?v=1790009321" + DEVQ, "tiles/sold.geojson?v=1790009321" + DEVQ]) {
+  for (const file of ["tiles/listings.geojson?v=1790012198" + DEVQ, "tiles/sold.geojson?v=1790012198" + DEVQ]) {
     const fc = await fetch(file).then(r => r.ok ? r.json() : null).catch(() => null);
     const f = fc?.features.find(x => x.properties.url === url);
     if (f) {
@@ -1611,7 +1698,7 @@ function popupListing(lngLat, p) {
    inside the house's own noise band (local_mae_pct) are called "about
    right" rather than dressed up as a weak signal. */
 function valueLine(p) {
-  if (p.excess_pct == null || !p.pred_price || !p.price) return "";
+  if (p.excess_pct == null || !p.pred_price || !p.price) return watchLine(p);
   const band = p.local_mae_pct ?? p.model_mae_pct ?? 6;
   const sp = v => (v > 0 ? "+" : "") + (+v).toFixed(1) + "%";
   // raw gap: what the seller asks vs what the model says the house sells for
@@ -1633,10 +1720,10 @@ function valueLine(p) {
   const rank = p.pctile != null
     ? (p.pctile <= 50 ? `cheapest ${Math.max(1, Math.round(p.pctile))}%` : `priciest ${Math.max(1, Math.round(100 - p.pctile))}%`)
       + " of scored listings by raw gap" : "";
-  let outcome = "";
+  let outcome = watchLine(p);
   if (p.exp_stl_pct != null) {
     const col = p.exp_stl_pct < -0.5 ? VALUE_UNDER : p.exp_stl_pct > 0.5 ? VALUE_OVER : "#52514e";
-    outcome = `<div class="hood value-pop">Likely sale <b>${money(p.exp_sale_price)}</b> · <b style="color:${col}">${sp(p.exp_stl_pct)}</b> vs asking` +
+    outcome += `<div class="hood value-pop">Likely sale <b>${money(p.exp_sale_price)}</b> · <b style="color:${col}">${sp(p.exp_stl_pct)}</b> vs asking` +
       (p.stl_lo != null ? ` <span class="popup-kv">(20–80% band ${sp(p.stl_lo)} to ${sp(p.stl_hi)})</span>` : "") +
       (p.p_cut_7d != null ? `<br>next 7 days: <b>${Math.round(100 * p.p_cut_7d)}%</b> chance of a price cut · <b>${Math.round(100 * p.p_contract_7d)}%</b> chance it goes under contract` : "") +
       `<br><span style="font-size:10.5px">outcome model: takes the asking price as given, ages with days on market</span></div>`;
