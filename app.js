@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "1789964308";  // replaced with the publish timestamp by publish.sh
+const BUILD = "1789964670";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -152,7 +152,7 @@ const baseCommute = new Map();  // GEOID -> baked Glenn values (for reset)
 
 map.on("load", async () => {
   /* block groups (choropleth base) */
-  bgData = await (await fetch("tiles/blockgroups.geojson?v=1789964308" + DEVQ)).json();
+  bgData = await (await fetch("tiles/blockgroups.geojson?v=1789964670" + DEVQ)).json();
   for (const f of bgData.features) {
     const p = f.properties;
     bgIndex.set(p.GEOID, p);
@@ -161,11 +161,11 @@ map.on("load", async () => {
       s_car: p.s_car, s_transit: p.s_transit, s_bike: p.s_bike,
     });
   }
-  bgOrder = await fetch("tiles/bg_order.json?v=1789964308" + DEVQ)
+  bgOrder = await fetch("tiles/bg_order.json?v=1789964670" + DEVQ)
     .then(r => r.ok ? r.json() : null).catch(() => null);
-  taxProfiles = await fetch("tiles/tax_profiles.json?v=1789964308" + DEVQ)
+  taxProfiles = await fetch("tiles/tax_profiles.json?v=1789964670" + DEVQ)
     .then(r => r.ok ? r.json() : null).catch(() => null);
-  trafficProfiles = await fetch("tiles/traffic_profiles.json?v=1789964308" + DEVQ)
+  trafficProfiles = await fetch("tiles/traffic_profiles.json?v=1789964670" + DEVQ)
     .then(r => r.ok ? r.json() : null).catch(() => null);
   const CATS = ["white", "black", "hispanic", "asian", "multi", "other"];
   for (const f of bgData.features) {
@@ -231,7 +231,7 @@ map.on("load", async () => {
   }, firstLabelLayer());
 
   /* county outline for orientation */
-  map.addSource("counties", { type: "geojson", data: "tiles/counties.geojson?v=1789964308" + DEVQ });
+  map.addSource("counties", { type: "geojson", data: "tiles/counties.geojson?v=1789964670" + DEVQ });
   map.addLayer({
     id: "county-line", type: "line", source: "counties",
     paint: { "line-color": "#52514e", "line-width": 1, "line-dasharray": [3, 2] },
@@ -253,7 +253,7 @@ map.on("load", async () => {
     }, firstLabelLayer());
   }
 
-  map.addSource("crimetrend", { type: "geojson", data: "tiles/crime_trend.geojson?v=1789964308" + DEVQ });
+  map.addSource("crimetrend", { type: "geojson", data: "tiles/crime_trend.geojson?v=1789964670" + DEVQ });
   map.addLayer({
     id: "crimetrend", type: "fill", source: "crimetrend",
     layout: { visibility: "none" },
@@ -312,13 +312,13 @@ map.on("load", async () => {
     },
   }, firstLabelLayer());
 
-  map.addSource("parks", { type: "geojson", data: "tiles/parks.geojson?v=1789964308" + DEVQ });
+  map.addSource("parks", { type: "geojson", data: "tiles/parks.geojson?v=1789964670" + DEVQ });
   map.addLayer({
     id: "parks", type: "fill", source: "parks",
     paint: { "fill-color": "#008300", "fill-opacity": 0.35 },
   }, firstLabelLayer());
 
-  map.addSource("amenities", { type: "geojson", data: "tiles/amenities.geojson?v=1789964308" + DEVQ });
+  map.addSource("amenities", { type: "geojson", data: "tiles/amenities.geojson?v=1789964670" + DEVQ });
   map.addLayer({
     id: "amenities", type: "circle", source: "amenities", minzoom: 11,
     paint: {
@@ -330,7 +330,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("grocery", { type: "geojson", data: "tiles/grocery.geojson?v=1789964308" + DEVQ });
+  map.addSource("grocery", { type: "geojson", data: "tiles/grocery.geojson?v=1789964670" + DEVQ });
   map.addLayer({
     id: "grocery", type: "circle", source: "grocery",
     paint: {
@@ -354,7 +354,7 @@ map.on("load", async () => {
              "text-halo-width": 1.2 },
   });
 
-  map.addSource("worship", { type: "geojson", data: "tiles/worship.geojson?v=1789964308" + DEVQ });
+  map.addSource("worship", { type: "geojson", data: "tiles/worship.geojson?v=1789964670" + DEVQ });
   map.addLayer({
     id: "worship", type: "circle", source: "worship", minzoom: 10,
     paint: {
@@ -366,7 +366,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("stripclubs", { type: "geojson", data: "tiles/stripclubs.geojson?v=1789964308" + DEVQ });
+  map.addSource("stripclubs", { type: "geojson", data: "tiles/stripclubs.geojson?v=1789964670" + DEVQ });
   map.loadImage("lib/bunny.png").then((img) => {
     if (!map.hasImage("bunny")) map.addImage("bunny", img.data);
     map.addLayer({
@@ -385,7 +385,7 @@ map.on("load", async () => {
     applyOverlays();
   }).catch(() => {});
 
-  map.addSource("housing", { type: "geojson", data: "tiles/housing.geojson?v=1789964308" + DEVQ });
+  map.addSource("housing", { type: "geojson", data: "tiles/housing.geojson?v=1789964670" + DEVQ });
   // radius grows with units (log-ish): a scattered-site house stays a dot,
   // a 200-unit tower reads as a blob; public housing drawn on top.
   const unitR = (lo, hi) => ["interpolate", ["linear"], ["sqrt", ["coalesce", ["get", "units"], 1]],
@@ -414,7 +414,7 @@ map.on("load", async () => {
     paint: { "text-color": "#7a0f5c", "text-halo-color": "#fcfcfb", "text-halo-width": 1.2 },
   });
 
-  map.addSource("districts", { type: "geojson", data: "tiles/school_districts.geojson?v=1789964308" + DEVQ });
+  map.addSource("districts", { type: "geojson", data: "tiles/school_districts.geojson?v=1789964670" + DEVQ });
   map.addLayer({
     id: "districts", type: "line", source: "districts",
     paint: { "line-color": "#52514e", "line-width": 1.2 },
@@ -428,7 +428,7 @@ map.on("load", async () => {
     paint: { "text-color": "#52514e", "text-halo-color": "#fcfcfb", "text-halo-width": 1.2 },
   });
 
-  map.addSource("listings", { type: "geojson", data: "tiles/listings.geojson?v=1789964308" + DEVQ });
+  map.addSource("listings", { type: "geojson", data: "tiles/listings.geojson?v=1789964670" + DEVQ });
   map.addLayer({
     id: "listings", type: "circle", source: "listings",
     paint: {
@@ -439,7 +439,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("sold", { type: "geojson", data: "tiles/sold.geojson?v=1789964308" + DEVQ });
+  map.addSource("sold", { type: "geojson", data: "tiles/sold.geojson?v=1789964670" + DEVQ });
   map.addLayer({
     id: "sold", type: "circle", source: "sold",
     paint: {
@@ -478,12 +478,12 @@ map.on("load", async () => {
     });
   })();
 
-  fetch("tiles/meta.json?v=1789964308" + DEVQ).then(r => r.ok ? r.json() : null).then(m => {
+  fetch("tiles/meta.json?v=1789964670" + DEVQ).then(r => r.ok ? r.json() : null).then(m => {
     if (m) $("data-stamp").textContent =
       `data as of ${m.updated} · ${m.listings.toLocaleString()} listings · ${m.sold.toLocaleString()} recent sales`
       + ` · build ${BUILD} · trend ${window.__trendCount ?? 0} areas`;
   }).catch(() => {});
-  fetch("tiles/model_scorecard.json?v=1789964308" + DEVQ).then(r => r.ok ? r.json() : null)
+  fetch("tiles/model_scorecard.json?v=1789964670" + DEVQ).then(r => r.ok ? r.json() : null)
     .then(modelCard).catch(() => {});
   buildPanel();
   applyOverlays();
@@ -1042,6 +1042,10 @@ function marketInsights() {
   const s2l = pick(S, p => p.sale_to_list);
   const above = s2l.filter(it => it.v > 0).length, at = s2l.filter(it => it.v === 0).length;
   const cuts = active.filter(r => r.p.price_change_pct < 0);
+  // model verdicts (only listings inside the modelled segment carry one)
+  const ex = pick(active, p => p.excess_pct);
+  const band = p => p.local_mae_pct ?? p.model_mae_pct ?? 6;
+  const exUnder = ex.filter(it => it.v < -band(it.p)).length, exOver = ex.filter(it => it.v > band(it.p)).length;
   const newWeek = active.filter(r => r.p.days_on_market != null && r.p.days_on_market <= 7).length;
   const perMonth = S.length / soldwin * 30.4;
   const supply = perMonth > 0 ? active.length / perMonth : null;
@@ -1065,6 +1069,8 @@ function marketInsights() {
          s2l.length ? `${pct(above, s2l.length)} over · ${pct(at, s2l.length)} at · ${pct(s2l.length - above - at, s2l.length)} under (${n(s2l)})` : "no list prices")}
     ${kv("price cuts", active.length ? pct(cuts.length, active.length) : "—",
          cuts.length ? `median −${fmt(-median(cuts.map(r => r.p.price_change_pct)), 1)}% (seen since Aug 28)` : "of actives, seen since Aug 28")}
+    ${ex.length ? kv("asking vs model value", (median(vals(ex)) > 0 ? "+" : "") + fmt(median(vals(ex)), 1) + "%",
+         `${pct(exUnder, ex.length)} under · ${pct(ex.length - exUnder - exOver, ex.length)} within noise · ${pct(exOver, ex.length)} over (${n(ex)} scored)`) : ""}
   </div>`;
 
   const chart = (title, svg) => `<div class="mkt-chart"><div class="mkt-title">${title}</div>${svg}</div>`;
@@ -1081,6 +1087,14 @@ function marketInsights() {
     html += chart(`sale price vs asking · <i style="color:#006300">under</i> / <i style="color:#d03b3b">over</i>`,
       histSVG([{ items: s2l, label: "sold", color: a => a < 0 ? "#006300" : a >= 1 ? "#d03b3b" : "#898781" }],
               { lo: -16, hi: 16, step: 1, tick: v => (v > 0 ? "+" : "") + Math.round(v) + "%", val: v => (v > 0 ? "+" : "") + fmt(v, 1) + "%" }));
+  }
+  if (ex.length >= 5) {
+    // bins coloured by the metro-wide noise band; the per-house band decides
+    // the split in the row above, so the two can differ at the edges
+    const mae = valMeta ? valMeta.mae : 6;
+    html += chart(`asking vs model value · <i style="color:${VALUE_UNDER}">under</i> / <i style="color:${VALUE_NEUTRAL}">within noise</i> / <i style="color:${VALUE_OVER}">over</i>`,
+      histSVG([{ items: ex, label: "active", color: a => a + 2 <= -mae ? VALUE_UNDER : a >= mae ? VALUE_OVER : VALUE_NEUTRAL }],
+              { lo: -32, hi: 32, step: 2, tick: v => (v > 0 ? "+" : "") + Math.round(v) + "%", val: v => (v > 0 ? "+" : "") + fmt(v, 1) + "%" }));
   }
   if (domA.length + domS.length >= 5) {
     html += chart(`days on market · <i style="color:${LISTING_COLOR}">active</i> vs <i style="color:${SOLD_COLOR}">sold (to contract)</i>`,
@@ -1522,7 +1536,7 @@ async function openDeepLink() {
   if (hp) setTaxHome(bgIndex.get(hp.GEOID));
   if (!HASH.p) return;
   const url = decodeURIComponent(HASH.p);
-  for (const file of ["tiles/listings.geojson?v=1789964308" + DEVQ, "tiles/sold.geojson?v=1789964308" + DEVQ]) {
+  for (const file of ["tiles/listings.geojson?v=1789964670" + DEVQ, "tiles/sold.geojson?v=1789964670" + DEVQ]) {
     const fc = await fetch(file).then(r => r.ok ? r.json() : null).catch(() => null);
     const f = fc?.features.find(x => x.properties.url === url);
     if (f) {
@@ -1594,7 +1608,8 @@ function valueLine(p) {
       + " of scored listings" : "";
   const rel = p.rel_discount != null
     ? ` · vs its county/type/price band ${p.rel_discount > 0 ? "+" : ""}${(+p.rel_discount).toFixed(1)}%` : "";
-  return `<div class="hood value-pop">Model value <b>${money(p.pred_price)}</b> · asking ${verdict}${rel}` +
+  const mppsf = p.sqft > 0 ? ` (<b>$${Math.round(p.pred_price / p.sqft).toLocaleString()}/sqft</b>)` : "";
+  return `<div class="hood value-pop">Model value <b>${money(p.pred_price)}</b>${mppsf} · asking ${verdict}${rel}` +
     `${rank ? `<br><span style="font-size:10.5px">${rank} · hedonic model of recent sales, typical error ±${(+band).toFixed(1)}%</span>` : ""}</div>`;
 }
 
