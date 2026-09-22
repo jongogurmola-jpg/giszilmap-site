@@ -1,56 +1,58 @@
 {
  "scorecard": {
-  "n_pairs": 961,
-  "median_err_pct": 6.89,
-  "mean_err_pct": 8.99,
-  "p90_err_pct": 19.53,
-  "bias_pct": 0.51,
-  "within_10pct": 66.4,
+  "n_pairs": 954,
+  "median_err_pct": 6.86,
+  "mean_err_pct": 9.0,
+  "p90_err_pct": 19.27,
+  "bias_pct": 0.29,
+  "within_10pct": 66.0,
   "median_lead_days": 13,
   "first_sale": "2026-08-24",
   "last_sale": "2026-09-21",
-  "auc_above_asking": 0.565,
-  "auc_n": 507,
-  "auc_base_rate": 0.499,
+  "auc_above_asking": 0.575,
+  "auc_n": 503,
+  "auc_base_rate": 0.503,
   "called_cheap_sold_vs_ask_pct": 0.0,
   "called_dear_sold_vs_ask_pct": 0.0,
   "signal_spread_pp": 0.0,
-  "holdout_median_err_pct": 6.46,
-  "live_vs_holdout_ratio": 1.07,
+  "holdout_median_err_pct": 6.47,
+  "live_vs_holdout_ratio": 1.06,
   "status": "ok",
-  "mode": "backfill \u2014 live log has 0 of 30 pairs so far",
+  "mode": "backfill \u2014 live log has 1 of 30 pairs so far",
   "live_log": {
-   "n_pairs": 0
+   "n_pairs": 1,
+   "median_err_pct": 12932.09,
+   "bias_pct": 12932.09
   }
  },
  "model": {
-  "trained_on": 3719,
-  "r2_log": 0.7889,
-  "median_abs_err_pct": 6.46,
-  "mean_abs_err_pct": 8.29,
-  "scored_active": 1588,
-  "asking_premium_pct": 0.65,
+  "trained_on": 3710,
+  "r2_log": 0.7911,
+  "median_abs_err_pct": 6.47,
+  "mean_abs_err_pct": 8.31,
+  "scored_active": 1574,
+  "asking_premium_pct": 0.6,
   "ppsf_factor": {
-   "<150": 1.399,
-   "150-190": 0.92,
-   "190-240": 0.916,
-   "240+": 1.173
+   "<150": 1.722,
+   "150-190": 0.919,
+   "190-240": 0.926,
+   "240+": 1.205
   },
   "era_floor_pct": {
-   "<1920": 7.27,
-   "1920-49": 7.43,
-   "1950-79": 6.28,
-   "1980-2009": 6.07,
-   "2010+": 6.14
+   "<1920": 7.68,
+   "1920-49": 7.57,
+   "1950-79": 6.4,
+   "1980-2009": 5.84,
+   "2010+": 6.05
   },
-  "era_Q_over_df": 5.2,
-  "city_Q_over_df": 1.44,
+  "era_Q_over_df": 8.32,
+  "city_Q_over_df": 1.39,
   "city_factor_range": [
-   0.828,
-   1.176
+   0.757,
+   1.116
   ],
   "segment": "ppsf:120-300,price:250000-600000",
   "ptype": "single"
  },
- "written": "2026-09-22 00:44"
+ "written": "2026-09-22 06:46"
 }
