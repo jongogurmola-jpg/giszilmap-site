@@ -2,10 +2,27 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "1790171146";  // replaced with the publish timestamp by publish.sh
+const BUILD = "80cd22afd6";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
+// publish.sh stamps every data file with its own content hash (window.__TILE_V),
+// so a publish only invalidates the files that actually changed.
+const TILE_V = window.__TILE_V || {};
+const tile = n => "tiles/" + n + (BUILD === "dev" ? DEVQ : TILE_V[n] ? "?v=" + TILE_V[n] : "");
+const EMPTY_FC = { type: "FeatureCollection", features: [] };
+// GeoJSON sources whose overlay is off by default: added empty, fetched by the
+// worker the first time the overlay is switched on (see ensureSource)
+const LAZY_SRC = { crimetrend: "crime_trend.geojson", parks: "parks.geojson", amenities: "amenities.geojson",
+  grocery: "grocery.geojson", worship: "worship.geojson", stripclubs: "stripclubs.geojson",
+  housing: "housing.geojson", districts: "school_districts.geojson" };
+const loadedSrc = new Set();
+function ensureSource(id) {
+  if (loadedSrc.has(id) || !map.getSource(id)) return;
+  loadedSrc.add(id);
+  if (id === "sold") { ensureSold().then(fc => map.getSource("sold")?.setData(fc)); return; }
+  if (LAZY_SRC[id]) map.getSource(id).setData(tile(LAZY_SRC[id]));
+}
 // self-heal a stale cached index.html: if the HTML shipped for a different
 // build than this script, the browser cached an old page -> reload once.
 try {
@@ -158,9 +175,53 @@ let destMarker = null;      // commute-destination marker
 let pickingDest = false;
 const baseCommute = new Map();  // GEOID -> baked Glenn values (for reset)
 
+/* ---------- failure handling ----------
+   A data fetch that dies inside MapLibre's worker used to leave the layer
+   blank with no message. Now: a small notice names the layer, and lazy
+   sources get one retry. A lost WebGL context (phone memory pressure)
+   is given a moment to come back, then the page reloads itself once. */
+let toastT = null;
+function toast(msg, ms = 6000) {
+  let el = $("toast");
+  if (!el) { el = document.createElement("div"); el.id = "toast"; document.body.appendChild(el); }
+  el.textContent = msg; el.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, ms);
+}
+const srcRetries = new Map();
+map.on("error", e => {
+  const err = e?.error, id = e?.sourceId;
+  if (!err || err.name === "AbortError") return;
+  if (e.tile) return;                       // a single missing vector tile is not news
+  console.warn("map error", id, err);
+  if (!id) return;
+  const n = (srcRetries.get(id) ?? 0) + 1; srcRetries.set(id, n);
+  const label = OVERLAYS.find(o => o.id === id)?.label ?? id;
+  if (n <= 2 && (LAZY_SRC[id] || id === "sold")) {
+    toast(`${label}: load failed, retrying…`);
+    loadedSrc.delete(id);
+    if (id === "sold") soldPromise = null;
+    setTimeout(() => ensureSource(id), 1500 * n);
+  } else {
+    toast(`${label}: failed to load (${err.message || err}). Reload to try again.`, 10000);
+  }
+});
+let ctxT = null;
+map.on("webglcontextlost", () => {
+  toast("map graphics were reset, recovering…");
+  clearTimeout(ctxT);
+  ctxT = setTimeout(() => {
+    try {
+      const n = +(sessionStorage.getItem("gzm_ctx") ?? 0);
+      if (n < 2) { sessionStorage.setItem("gzm_ctx", n + 1); location.reload(); }
+      else toast("map graphics could not be restored, please reload", 15000);
+    } catch (e) { location.reload(); }
+  }, 4000);
+});
+map.on("webglcontextrestored", () => { clearTimeout(ctxT); toast("map graphics restored", 2500); });
+
 map.on("load", async () => {
   /* block groups (choropleth base) */
-  bgData = await (await fetch("tiles/blockgroups.geojson?v=1790171146" + DEVQ)).json();
+  bgData = await (await fetch(tile("blockgroups.geojson"))).json();
   for (const f of bgData.features) {
     const p = f.properties;
     bgIndex.set(p.GEOID, p);
@@ -169,11 +230,11 @@ map.on("load", async () => {
       s_car: p.s_car, s_transit: p.s_transit, s_bike: p.s_bike,
     });
   }
-  bgOrder = await fetch("tiles/bg_order.json?v=1790171146" + DEVQ)
+  bgOrder = await fetch(tile("bg_order.json"))
     .then(r => r.ok ? r.json() : null).catch(() => null);
-  taxProfiles = await fetch("tiles/tax_profiles.json?v=1790171146" + DEVQ)
+  taxProfiles = await fetch(tile("tax_profiles.json"))
     .then(r => r.ok ? r.json() : null).catch(() => null);
-  trafficProfiles = await fetch("tiles/traffic_profiles.json?v=1790171146" + DEVQ)
+  trafficProfiles = await fetch(tile("traffic_profiles.json"))
     .then(r => r.ok ? r.json() : null).catch(() => null);
   const CATS = ["white", "black", "hispanic", "asian", "multi", "other"];
   for (const f of bgData.features) {
@@ -239,7 +300,7 @@ map.on("load", async () => {
   }, firstLabelLayer());
 
   /* county outline for orientation */
-  map.addSource("counties", { type: "geojson", data: "tiles/counties.geojson?v=1790171146" + DEVQ });
+  map.addSource("counties", { type: "geojson", data: tile("counties.geojson") });
   map.addLayer({
     id: "county-line", type: "line", source: "counties",
     paint: { "line-color": "#52514e", "line-width": 1, "line-dasharray": [3, 2] },
@@ -261,7 +322,7 @@ map.on("load", async () => {
     }, firstLabelLayer());
   }
 
-  map.addSource("crimetrend", { type: "geojson", data: "tiles/crime_trend.geojson?v=1790171146" + DEVQ });
+  map.addSource("crimetrend", { type: "geojson", data: EMPTY_FC });
   map.addLayer({
     id: "crimetrend", type: "fill", source: "crimetrend",
     layout: { visibility: "none" },
@@ -320,13 +381,13 @@ map.on("load", async () => {
     },
   }, firstLabelLayer());
 
-  map.addSource("parks", { type: "geojson", data: "tiles/parks.geojson?v=1790171146" + DEVQ });
+  map.addSource("parks", { type: "geojson", data: EMPTY_FC });
   map.addLayer({
     id: "parks", type: "fill", source: "parks",
     paint: { "fill-color": "#008300", "fill-opacity": 0.35 },
   }, firstLabelLayer());
 
-  map.addSource("amenities", { type: "geojson", data: "tiles/amenities.geojson?v=1790171146" + DEVQ });
+  map.addSource("amenities", { type: "geojson", data: EMPTY_FC });
   map.addLayer({
     id: "amenities", type: "circle", source: "amenities", minzoom: 11,
     paint: {
@@ -338,7 +399,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("grocery", { type: "geojson", data: "tiles/grocery.geojson?v=1790171146" + DEVQ });
+  map.addSource("grocery", { type: "geojson", data: EMPTY_FC });
   map.addLayer({
     id: "grocery", type: "circle", source: "grocery",
     paint: {
@@ -362,7 +423,7 @@ map.on("load", async () => {
              "text-halo-width": 1.2 },
   });
 
-  map.addSource("worship", { type: "geojson", data: "tiles/worship.geojson?v=1790171146" + DEVQ });
+  map.addSource("worship", { type: "geojson", data: EMPTY_FC });
   map.addLayer({
     id: "worship", type: "circle", source: "worship", minzoom: 10,
     paint: {
@@ -374,7 +435,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("stripclubs", { type: "geojson", data: "tiles/stripclubs.geojson?v=1790171146" + DEVQ });
+  map.addSource("stripclubs", { type: "geojson", data: EMPTY_FC });
   map.loadImage("lib/bunny.png").then((img) => {
     if (!map.hasImage("bunny")) map.addImage("bunny", img.data);
     map.addLayer({
@@ -393,7 +454,7 @@ map.on("load", async () => {
     applyOverlays();
   }).catch(() => {});
 
-  map.addSource("housing", { type: "geojson", data: "tiles/housing.geojson?v=1790171146" + DEVQ });
+  map.addSource("housing", { type: "geojson", data: EMPTY_FC });
   // radius grows with units (log-ish): a scattered-site house stays a dot,
   // a 200-unit tower reads as a blob; public housing drawn on top.
   const unitR = (lo, hi) => ["interpolate", ["linear"], ["sqrt", ["coalesce", ["get", "units"], 1]],
@@ -422,7 +483,7 @@ map.on("load", async () => {
     paint: { "text-color": "#7a0f5c", "text-halo-color": "#fcfcfb", "text-halo-width": 1.2 },
   });
 
-  map.addSource("districts", { type: "geojson", data: "tiles/school_districts.geojson?v=1790171146" + DEVQ });
+  map.addSource("districts", { type: "geojson", data: EMPTY_FC });
   map.addLayer({
     id: "districts", type: "line", source: "districts",
     paint: { "line-color": "#52514e", "line-width": 1.2 },
@@ -436,7 +497,7 @@ map.on("load", async () => {
     paint: { "text-color": "#52514e", "text-halo-color": "#fcfcfb", "text-halo-width": 1.2 },
   });
 
-  map.addSource("listings", { type: "geojson", data: "tiles/listings.geojson?v=1790171146" + DEVQ });
+  map.addSource("listings", { type: "geojson", data: EMPTY_FC });
   map.addLayer({
     id: "listings", type: "circle", source: "listings",
     paint: {
@@ -447,7 +508,7 @@ map.on("load", async () => {
     },
   });
 
-  map.addSource("sold", { type: "geojson", data: "tiles/sold.geojson?v=1790171146" + DEVQ });
+  map.addSource("sold", { type: "geojson", data: EMPTY_FC });
   map.addLayer({
     id: "sold", type: "circle", source: "sold",
     paint: {
@@ -459,7 +520,7 @@ map.on("load", async () => {
 
   /* houses to watch: p26's flagged listings, drawn on top of the dots. Colour
      = the most urgent reason; a house with two reasons gets a dark ring. */
-  map.addSource("watch", { type: "geojson", data: "tiles/watch.geojson?v=1790171146" + DEVQ });
+  map.addSource("watch", { type: "geojson", data: EMPTY_FC });
   const watchColor = ["match", ["get", "watch_primary"],
     "move_fast", WATCH.move_fast.color, "cut_likely", WATCH.cut_likely.color,
     "room", WATCH.room.color, WATCH.below_model.color];
@@ -518,13 +579,13 @@ map.on("load", async () => {
     });
   })();
 
-  fetch("tiles/meta.json?v=1790171146" + DEVQ).then(r => r.ok ? r.json() : null).then(m => {
+  fetch(tile("meta.json")).then(r => r.ok ? r.json() : null).then(m => {
     if (m) $("data-stamp").textContent =
       `data as of ${m.updated} · ${m.listings.toLocaleString()} listings · ${m.sold.toLocaleString()} recent sales`
       + ` · build ${BUILD} · trend ${window.__trendCount ?? 0} areas`;
   }).catch(() => {});
   Promise.all(["model_scorecard", "outcomes_model"].map(n =>
-    fetch(`tiles/${n}.json` + DEVQ).then(r => r.ok ? r.json() : null).catch(() => null)))
+    fetch(tile(n + ".json")).then(r => r.ok ? r.json() : null).catch(() => null)))
     .then(([c, o]) => modelCard(c, o));
   buildPanel();
   applyOverlays();
@@ -651,13 +712,16 @@ function buildPanel() {
     }
   }
 
-  $("panel-toggle").onclick = () => $("panel").classList.toggle("hidden");
+  $("panel-toggle").onclick = () => {
+    if (!$("panel").classList.toggle("hidden")) marketInsights();
+  };
   if (matchMedia("(max-width: 640px)").matches) $("panel").classList.add("hidden");
 }
 
 function applyOverlays() {
   for (const o of OVERLAYS) {
     const vis = o.on ? "visible" : "none";
+    if (o.on) ensureSource(o.id);
     if (o.id === "racedots") {
       const yr = $("dotyear").value;
       for (const y of ["2020", "2010", "2000"])
@@ -1051,14 +1115,34 @@ function buildCityOptions() {
   sel.value = cur;
   if (sel.value !== cur) sel.value = "";
   sel.onchange = () => { store.set("mcity", sel.value); marketInsights(); };
-  let t = null;
-  map.on("moveend", () => { if (sel.value === "__view") { clearTimeout(t); t = setTimeout(marketInsights, 150); } });
+  if (!sel.dataset.wired) {
+    sel.dataset.wired = "1";
+    let t = null;
+    map.on("moveend", () => { if (sel.value === "__view") { clearTimeout(t); t = setTimeout(marketInsights, 150); } });
+  }
 }
 
+let soldFC = null, soldPromise = null, marketReady = null;
+/* sold.geojson is 7 MB raw and only needed for the sold overlay, market
+   insights and deep links, so it is fetched once, the first time one asks. */
+function ensureSold() {
+  return soldPromise ??= fetch(tile("sold.geojson")).then(r => r.ok ? r.json() : EMPTY_FC)
+    .catch(() => EMPTY_FC).then(fc => {
+      soldFC = fc;
+      if (mktData) { mktData.sold = wrapMkt(fc); buildCityOptions(); }
+      return fc;
+    });
+}
+let mktK = 0;
+const wrapMkt = fc => fc.features.map(f => ({
+  p: f.properties, city: cityNorm(f.properties.city), ll: f.geometry.coordinates, k: mktK++,
+  wk: addrKey(f.properties.address) + "|" + addrKey(f.properties.city) }));
+
 async function loadMarketData() {
+  let done; marketReady = new Promise(r => done = r);
   try {
-    const [l, s, v, w] = await Promise.all(["listings", "sold", "valuation", "watch"].map(n =>
-      fetch(`tiles/${n}.geojson` + DEVQ).then(r => r.ok ? r.json() : { features: [] })));
+    const [l, v, w] = await Promise.all(["listings", "valuation", "watch"].map(n =>
+      fetch(tile(n + ".geojson")).then(r => r.ok ? r.json() : EMPTY_FC)));
     // houses-to-watch flags onto the listing records, so either layer's popup explains why
     if (w.features.length) {
       const key = p => addrKey(p.address) + "|" + addrKey(p.city);
@@ -1085,15 +1169,12 @@ async function loadMarketData() {
       }
       const p0 = v.features[0].properties;
       valMeta = { n, total: v.features.length, mae: p0.model_mae_pct, segment: p0.segment, asof: p0.asof };
-      const src = map.getSource("listings");
-      if (src) src.setData(l);
       if (!OVERLAYS.find(o => o.id === "traffic").on) legendDots();   // legend reads valMeta
     }
-    let k = 0;
-    const wrap = fc => fc.features.map(f => ({
-      p: f.properties, city: cityNorm(f.properties.city), ll: f.geometry.coordinates, k: k++,
-      wk: addrKey(f.properties.address) + "|" + addrKey(f.properties.city) }));
-    mktData = { listings: wrap(l), sold: wrap(s) };
+    // the map sources take the parsed objects: one fetch, one parse, no second tiling pass
+    map.getSource("listings")?.setData(l);
+    map.getSource("watch")?.setData(w);
+    mktData = { listings: wrapMkt(l), sold: soldFC ? wrapMkt(soldFC) : [] };
   } catch (e) {
     console.warn("market data", e);
     mktData = { listings: [], sold: [] };
@@ -1101,11 +1182,14 @@ async function loadMarketData() {
   buildCityOptions();
   $("market-out").addEventListener("click", marketOutClick);
   marketInsights();
+  done();
 }
 
 function marketInsights() {
   const out = $("market-out");
   if (!mktData || !out) return;
+  if ($("panel").classList.contains("hidden")) return;   // re-run when the panel opens
+  if (!soldFC) ensureSold().then(marketInsights);         // first paint is active-only; sold follows
   const city = $("mcity").value;
   const { listing: f, sold: g } = buildListingFilters();
   // status is the one listing filter ignored: the point is to see all stages
@@ -1637,14 +1721,10 @@ async function openDeepLink() {
   if (hp) setTaxHome(bgIndex.get(hp.GEOID));
   if (!HASH.p) return;
   const url = decodeURIComponent(HASH.p);
-  for (const file of ["tiles/listings.geojson?v=1790171146" + DEVQ, "tiles/sold.geojson?v=1790171146" + DEVQ]) {
-    const fc = await fetch(file).then(r => r.ok ? r.json() : null).catch(() => null);
-    const f = fc?.features.find(x => x.properties.url === url);
-    if (f) {
-      map.once("idle", () => popupListing({ lng, lat }, f.properties));
-      return;
-    }
-  }
+  await marketReady;
+  let r = mktData.listings.find(x => x.p.url === url);
+  if (!r) { await ensureSold(); r = mktData.sold.find(x => x.p.url === url); }
+  if (r) map.once("idle", () => popupListing({ lng, lat }, r.p));
 }
 
 function popupListing(lngLat, p) {

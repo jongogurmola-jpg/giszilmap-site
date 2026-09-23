@@ -144,3 +144,8 @@ select { width: 100%; padding: 5px; font-size: 13px; }
 .mkt-go { flex: 0 0 auto; border: 1px solid #d6d5cd; background: #fcfcfb; border-radius: 4px; cursor: pointer;
           font-size: 13px; line-height: 1; padding: 2px 5px; color: #52514e; }
 .mkt-go:hover { background: #ebe9e2; color: #0b0b0b; }
+
+#toast { position: fixed; left: 50%; bottom: 44px; transform: translateX(-50%); z-index: 50;
+  background: #0b0b0b; color: #fcfcfb; font-size: 12.5px; padding: 8px 14px; border-radius: 6px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.3); max-width: 90vw; pointer-events: none; }
+#toast[hidden] { display: none; }
