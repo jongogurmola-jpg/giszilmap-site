@@ -18,11 +18,9 @@
   "holdout_median_err_pct": 6.32,
   "live_vs_holdout_ratio": 1.07,
   "status": "ok",
-  "mode": "backfill \u2014 live log has 1 of 30 pairs so far",
+  "mode": "backfill \u2014 live log has 0 of 30 pairs so far",
   "live_log": {
-   "n_pairs": 1,
-   "median_err_pct": 12932.09,
-   "bias_pct": 12932.09
+   "n_pairs": 0
   }
  },
  "model": {
@@ -54,5 +52,5 @@
   "segment": "ppsf:120-300,price:250000-600000",
   "ptype": "single"
  },
- "written": "2026-09-22 12:42"
+ "written": "2026-09-22 12:51"
 }
