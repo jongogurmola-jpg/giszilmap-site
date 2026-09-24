@@ -1,41 +1,41 @@
 {
-  "asof": "2026-09-24 00:45:00",
+  "asof": "2026-09-24 06:43:00",
   "horizon_days": 7,
-  "scored_active": 6406,
+  "scored_active": 6441,
   "sale_to_list": {
-    "n_train": 5010,
-    "n_test": 2183,
+    "n_train": 5009,
+    "n_test": 2194,
     "mae_model_pp": 3.72,
-    "mae_dom_only_pp": 3.83,
-    "mae_predict_median_pp": 4.04,
-    "auc_sells_above_asking": 0.825,
-    "auc_dom_only": 0.796,
+    "mae_dom_only_pp": 3.85,
+    "mae_predict_median_pp": 4.05,
+    "auc_sells_above_asking": 0.824,
+    "auc_dom_only": 0.788,
     "auc_day_one_no_timing": 0.677,
-    "band_coverage_raw": 0.535,
-    "band_widened_by_pp": 0.36,
+    "band_coverage_raw": 0.545,
+    "band_widened_by_pp": 0.38,
     "band_coverage_widened": 0.6
   },
   "p_cut": {
     "listing_days": 126129,
     "listings": 9077,
-    "base_rate": 0.1185,
-    "auc": 0.688,
+    "base_rate": 0.1186,
+    "auc": 0.69,
     "auc_dom_only": 0.611,
     "brier": 0.0992,
-    "brier_base_rate": 0.1044,
+    "brier_base_rate": 0.1046,
     "rate_in_top_decile": 0.269,
     "calibration": [
       [
         0.025,
-        0.039
+        0.036
       ],
       [
         0.062,
-        0.067
+        0.069
       ],
       [
         0.101,
-        0.107
+        0.106
       ],
       [
         0.148,
@@ -43,19 +43,19 @@
       ],
       [
         0.242,
-        0.231
+        0.233
       ]
     ]
   },
   "p_contract": {
     "listing_days": 126129,
     "listings": 9077,
-    "base_rate": 0.1016,
-    "auc": 0.746,
+    "base_rate": 0.1018,
+    "auc": 0.748,
     "auc_dom_only": 0.694,
-    "brier": 0.0831,
-    "brier_base_rate": 0.0913,
-    "rate_in_top_decile": 0.329,
+    "brier": 0.0833,
+    "brier_base_rate": 0.0914,
+    "rate_in_top_decile": 0.325,
     "calibration": [
       [
         0.013,
@@ -67,15 +67,15 @@
       ],
       [
         0.07,
-        0.078
+        0.076
       ],
       [
-        0.122,
-        0.107
+        0.121,
+        0.109
       ],
       [
-        0.278,
-        0.254
+        0.279,
+        0.255
       ]
     ]
   }
