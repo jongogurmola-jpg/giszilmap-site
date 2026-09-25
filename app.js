@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "80cd22afd6";  // replaced with the publish timestamp by publish.sh
+const BUILD = "accc2f7242";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -556,26 +556,39 @@ map.on("load", async () => {
     .addTo(map);
 
   // aggregate visit counter (privacy-friendly: a bare count, no identifiers).
-  // increment once per browser session; always display the running totals.
+  // "unique" = unique browsers, deduped by a persistent localStorage flag,
+  // so a phone on a cycling IP still counts once; a new device or cleared
+  // storage counts once more. What used to inflate it was us: every headless
+  // screenshot ran in a fresh profile, and localhost dev loads hit the same
+  // public counter. Those are now excluded, and the owner can opt out for
+  // good on any browser by opening the map once with #me (#notme undoes it).
+  // Counter keys were restarted on 2026-09-24 so the total is clean from then.
   (() => {
-    const NS = "giszilmap-jongo-9f2a";
+    const NS = "giszilmap-jongo-9f2a", SINCE = "2026-09-24";
     const day = new Date().toISOString().slice(0, 10);
-    // unique visitors = unique browsers, deduped by a persistent localStorage
-    // flag (no IPs, no cookies, no fingerprinting). A new browser/device or
-    // cleared storage counts once more — the standard cookieless limitation.
-    const flag = (k) => { try { if (localStorage.getItem(k)) return false;
-      localStorage.setItem(k, "1"); return true; } catch (e) { return false; } };
+    const ls = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+                 set: k => { try { localStorage.setItem(k, "1"); } catch (e) {} },
+                 del: k => { try { localStorage.removeItem(k); } catch (e) {} } };
+    if (HASH.me !== undefined) ls.set("gzm_owner");
+    if (HASH.notme !== undefined) ls.del("gzm_owner");
+    const owner = !!ls.get("gzm_owner");
+    const robot = window.__NOCOUNT || navigator.webdriver || /HeadlessChrome/.test(navigator.userAgent);
+    const local = BUILD === "dev" || /^(localhost|127\.|0\.0\.0\.0|\[::1\])/.test(location.hostname);
+    if (robot) return;                       // screenshots: neither counted nor shown
+    const count = !owner && !local;
+    const flag = k => { if (!count || ls.get(k)) return false; ls.set(k); return true; };
     const call = (key, isNew) =>
       fetch(`https://abacus.jasoncameron.dev/${isNew ? "hit" : "get"}/${NS}/${key}`)
         .then(r => r.json()).catch(() => null);
     Promise.all([
-      call("uniques", flag("gzm_uv")),
-      call("u-" + day, flag("gzm_uv_" + day)),
+      call("v2-uniques", flag("gzm_uv2")),
+      call("v2-u-" + day, flag("gzm_uv2_" + day)),
     ]).then(([tot, today]) => {
       if (!tot) return;
       const el = document.getElementById("visit-count");
-      if (el) el.textContent = `\u25C9 ${tot.value.toLocaleString()} unique visitors`
-        + (today ? ` \u00B7 ${today.value.toLocaleString()} today` : "");
+      if (el) el.textContent = `\u25C9 ${(tot.value ?? 0).toLocaleString()} unique visitors since ${SINCE}`
+        + (today?.value != null ? ` \u00B7 ${today.value.toLocaleString()} today` : "")
+        + (owner ? " \u00B7 you are not counted" : local ? " \u00B7 local, not counted" : "");
     });
   })();
 
