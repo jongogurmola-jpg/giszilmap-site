@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "84b7436b1e";  // replaced with the publish timestamp by publish.sh
+const BUILD = "0c6292f19c";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -1456,7 +1456,17 @@ function muniIncomeTax(income, workMuniName, homeMuni) {
   return { total: workTax + residenceOwed, work: workTax, residence: residenceOwed, sameCity: false };
 }
 
-function estimateTax(homeMuni, county, propRate, homeVal) {
+/* school district income tax: residents of a levying district pay it on top of
+   state and city tax. Traditional base = Ohio taxable income (approximated as
+   income less the state exemption); "earned income only" districts tax wages
+   and self-employment income, which is what the income boxes hold. */
+function sditTax(combined, sd) {
+  if (!sd || !sd.rate) return 0;
+  const base = sd.earnedOnly ? combined : Math.max(0, combined - taxProfiles.state.exempt);
+  return base * sd.rate;
+}
+
+function estimateTax(homeMuni, county, propRate, homeVal, sd) {
   // reuses the current earner inputs; returns tax components for a residence
   const S = taxProfiles.state;
   const inc1 = +$("inc1").value || 0, inc2 = +$("inc2").value || 0;
@@ -1466,8 +1476,9 @@ function estimateTax(homeMuni, county, propRate, homeVal) {
   const e2 = muniIncomeTax(inc2, $("wfh2").checked ? "" : $("work2").value, homeMuni);
   const muni = e1.total + e2.total;
   const prop = (homeVal || 0) * (propRate / 100);
-  return { state, muni, prop, combined, income: state + muni,
-           total: state + muni + prop,
+  const school = sditTax(combined, sd);
+  return { state, muni, prop, school, combined, income: state + muni + school,
+           total: state + muni + school + prop,
            sales: taxProfiles.counties[county]?.sales };
 }
 
@@ -1489,7 +1500,8 @@ function computeTax() {
   const county = taxHome.county;
   const sales = taxProfiles.counties[county]?.sales;
 
-  const totalIncomeTax = state + muni;
+  const school = sditTax(combined, taxHome.sd);
+  const totalIncomeTax = state + muni + school;
   const line = (l, v, cls = "") =>
     `<tr class="${cls}"><td>${l}</td><td class="num">$${Math.round(v).toLocaleString()}</td></tr>`;
   const rateNote = M[homeMuni]
@@ -1500,7 +1512,10 @@ function computeTax() {
       ${line("Ohio income tax (2.75%)", state)}
       ${line(`Municipal income tax`, muni)}
       <tr class="sub"><td colspan="2">home: ${homeName} — ${rateNote}${e1.sameCity && e2.sameCity ? "" : "; work-city credit applied"}</td></tr>
+      ${taxHome.sd ? line(`School district income tax (${(taxHome.sd.rate * 100).toFixed(2)}%)`, school) +
+        `<tr class="sub"><td colspan="2">${taxHome.sd.name}${taxHome.sd.earnedOnly ? ", on earned income only" : ", on Ohio taxable income"}</td></tr>` : ""}
       ${homeVal ? line(`Property tax (${taxHome.propRate}%${taxHome.propSrc === "county-median" ? " est." : ""})`, prop) : `<tr><td>Property tax</td><td class="num">enter home value</td></tr>`}
+      ${taxHome.distName ? `<tr class="sub"><td colspan="2">taxing district: ${taxHome.distName} · owner-occupied, after state rollbacks (est.)</td></tr>` : ""}
       <tr class="tax-total"><td>Total annual tax</td><td class="num">$${Math.round(totalIncomeTax + prop).toLocaleString()}</td></tr>
       ${combined ? `<tr class="sub"><td colspan="2">effective rate on income: ${(100 * (totalIncomeTax + prop) / combined).toFixed(1)}%</td></tr>` : ""}
       <tr class="sub"><td colspan="2">${county} County sales tax: ${sales}%</td></tr>
@@ -1525,11 +1540,17 @@ function bgAtPoint(lng, lat) {
   return null;
 }
 
+function schoolTax(props) {
+  return props && props.sdit_rate > 0
+    ? { rate: props.sdit_rate, earnedOnly: !!props.sdit_earned_only, name: props.sdit_name } : null;
+}
+
 function setTaxHome(props) {
   if (!taxProfiles || !props) return;
   taxHome = {
     muni: props.res_muni, county: props.county,
-    propRate: props.prop_rate, propSrc: props.prop_src,
+    propRate: props.prop_rate, propSrc: props.prop_src, distName: props.tax_dist_name,
+    sd: schoolTax(props),
   };
   $("tax-home").innerHTML = `<b>Residence:</b> ${props.res_muni || "(unincorporated)"}, ${props.county} Co.`;
   computeTax();
@@ -1833,10 +1854,10 @@ function popupListing(lngLat, p) {
       · grocery ${bg.grocery_walk_min != null ? fmt(bg.grocery_walk_min) + " min walk" : ">45 min"}</div>` : "";
   let taxLine = "";
   if (taxProfiles && bg && p.price) {
-    const t = estimateTax(bg.res_muni, bg.county, bg.prop_rate, +p.price);
+    const t = estimateTax(bg.res_muni, bg.county, bg.prop_rate, +p.price, schoolTax(bg));
     const yr = (n) => "$" + Math.round(n).toLocaleString();
     taxLine = `<div class="hood tax-pop"><b>Est. total tax here: ${yr(t.total)}/yr</b><br>` +
-      `income ${yr(t.income)} + property ${yr(t.prop)} ` +
+      `income ${yr(t.income)}${t.school ? ` (incl. ${yr(t.school)} school district income tax)` : ""} + property ${yr(t.prop)} ` +
       `(${bg.prop_rate}%${bg.prop_src === "county-median" ? " est." : ""})` +
       `${t.combined ? " · " + (100 * t.total / t.combined).toFixed(1) + "% of income" : ""}` +
       `<br><span style="font-size:10.5px">set incomes/workplaces in the Tax burden panel</span></div>`;
