@@ -1,26 +1,26 @@
 {
  "scorecard": {
-  "n_pairs": 1032,
-  "median_err_pct": 7.6,
-  "mean_err_pct": 9.53,
-  "p90_err_pct": 20.02,
-  "bias_pct": 0.43,
-  "within_10pct": 61.2,
+  "n_pairs": 1052,
+  "median_err_pct": 7.79,
+  "mean_err_pct": 9.63,
+  "p90_err_pct": 20.52,
+  "bias_pct": 0.61,
+  "within_10pct": 61.1,
   "median_lead_days": 15,
   "first_sale": "2026-08-31",
   "last_sale": "2026-09-29",
   "auc_above_asking": 0.614,
-  "auc_n": 553,
-  "auc_base_rate": 0.456,
+  "auc_n": 564,
+  "auc_base_rate": 0.454,
   "called_cheap_sold_vs_ask_pct": 0.0,
-  "called_dear_sold_vs_ask_pct": -0.39,
-  "signal_spread_pp": 0.39,
+  "called_dear_sold_vs_ask_pct": -0.03,
+  "signal_spread_pp": 0.03,
   "by_tier": {
    "core": {
-    "n": 937,
-    "median_err_pct": 7.57,
-    "bias_pct": 1.3,
-    "within_10pct": 61.2
+    "n": 957,
+    "median_err_pct": 7.8,
+    "bias_pct": 1.31,
+    "within_10pct": 61.0
    },
    "upper": {
     "n": 95,
@@ -29,97 +29,99 @@
     "within_10pct": 62.1
    }
   },
-  "holdout_median_err_pct": 6.8,
-  "live_vs_holdout_ratio": 1.12,
+  "holdout_median_err_pct": 6.87,
+  "live_vs_holdout_ratio": 1.13,
   "status": "ok",
-  "mode": "backfill \u2014 live log has 0 of 30 pairs so far",
+  "mode": "backfill \u2014 live log has 1 of 30 pairs so far",
   "live_log": {
-   "n_pairs": 0
+   "n_pairs": 1,
+   "median_err_pct": 8.38,
+   "bias_pct": 8.38
   }
  },
  "model": {
-  "trained_on": 3617,
-  "r2_log": 0.7791,
-  "median_abs_err_pct": 6.8,
-  "mean_abs_err_pct": 8.7,
-  "scored_active": 1898,
+  "trained_on": 3637,
+  "r2_log": 0.7831,
+  "median_abs_err_pct": 6.87,
+  "mean_abs_err_pct": 8.6,
+  "scored_active": 1883,
   "ppsf_factor": {
-   "<150": 1.599,
-   "150-190": 0.899,
-   "190-240": 0.913,
-   "240+": 1.317
+   "<150": 1.644,
+   "150-190": 0.92,
+   "190-240": 0.888,
+   "240+": 1.234
   },
   "era_floor_pct": {
-   "<1920": 7.33,
-   "1920-49": 7.72,
-   "1950-79": 6.79,
-   "1980-2009": 6.44,
-   "2010+": 6.11
+   "<1920": 7.85,
+   "1920-49": 8.87,
+   "1950-79": 6.71,
+   "1980-2009": 6.4,
+   "2010+": 6.35
   },
-  "era_Q_over_df": 5.6,
-  "city_Q_over_df": 1.37,
+  "era_Q_over_df": 10.23,
+  "city_Q_over_df": 1.32,
   "city_factor_range": [
-   0.816,
-   1.108
+   0.849,
+   1.099
   ],
   "segment": "ppsf:120-300,price:250000-600000",
-  "asking_premium_pct": 1.8,
+  "asking_premium_pct": 2.1,
   "ptype": "single",
   "tiers": {
    "core": {
     "train": "ppsf:120-300,price:250000-600000",
     "score": "ppsf:120-300,price:250000-600000",
-    "trained_on": 3617,
-    "r2_log": 0.7791,
-    "median_abs_err_pct": 6.8,
-    "mean_abs_err_pct": 8.7,
-    "scored_active": 1626,
+    "trained_on": 3637,
+    "r2_log": 0.7831,
+    "median_abs_err_pct": 6.87,
+    "mean_abs_err_pct": 8.6,
+    "scored_active": 1612,
     "ppsf_factor": {
-     "<150": 1.599,
-     "150-190": 0.899,
-     "190-240": 0.913,
-     "240+": 1.317
+     "<150": 1.644,
+     "150-190": 0.92,
+     "190-240": 0.888,
+     "240+": 1.234
     },
     "era_floor_pct": {
-     "<1920": 7.33,
-     "1920-49": 7.72,
-     "1950-79": 6.79,
-     "1980-2009": 6.44,
-     "2010+": 6.11
+     "<1920": 7.85,
+     "1920-49": 8.87,
+     "1950-79": 6.71,
+     "1980-2009": 6.4,
+     "2010+": 6.35
     },
-    "era_Q_over_df": 5.6,
-    "city_Q_over_df": 1.37,
+    "era_Q_over_df": 10.23,
+    "city_Q_over_df": 1.32,
     "city_factor_range": [
-     0.816,
-     1.108
+     0.849,
+     1.099
     ]
    },
    "upper": {
     "train": "ppsf:120-350,price:550000-800000",
     "score": "ppsf:120-350,price:600001-800000",
     "trained_on": 643,
-    "r2_log": 0.1602,
-    "median_abs_err_pct": 6.39,
-    "mean_abs_err_pct": 7.86,
-    "scored_active": 272,
+    "r2_log": 0.165,
+    "median_abs_err_pct": 6.43,
+    "mean_abs_err_pct": 7.82,
+    "scored_active": 271,
     "ppsf_factor": {
      "150-190": 1.0,
      "190-240": 1.0,
      "240+": 1.0
     },
     "era_floor_pct": {
-     "1950-79": 6.01,
-     "1980-2009": 6.26,
-     "2010+": 6.83
+     "1950-79": 6.2,
+     "1980-2009": 6.49,
+     "2010+": 6.49
     },
-    "era_Q_over_df": 1.96,
-    "city_Q_over_df": 1.86,
+    "era_Q_over_df": 1.32,
+    "city_Q_over_df": 1.82,
     "city_factor_range": [
-     0.821,
-     1.279
+     0.816,
+     1.232
     ]
    }
   }
  },
- "written": "2026-09-29 08:46"
+ "written": "2026-09-29 12:28"
 }
