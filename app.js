@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "10ad9bda40";  // replaced with the publish timestamp by publish.sh
+const BUILD = "84b7436b1e";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -47,6 +47,32 @@ const DOT_COLORS = {
 };
 const LISTING_COLOR = "#4a3aa7";
 const PENDING_COLOR = "#eb6834";   // contingent / under contract
+const LISTING_STATUS_COLOR = ["match", ["get", "status"],
+  "contingent", PENDING_COLOR, "pending", PENDING_COLOR, LISTING_COLOR];
+// a listing whose asking price this tool has seen change (p09's price_changed date)
+const CHANGED = ["to-boolean", ["get", "price_changed"]];
+/* the square marker: SQ_BODY px of solid square inside SQ_PAD px of distance
+   field, which the halo draws into. MapLibre reads alpha 0.75 as the edge and
+   1/8 per px either side of it. */
+const SQ_BODY = 10, SQ_PAD = 4;
+// icon-size per px of circle radius: side = 1.8 r, about the circle's area
+const SQ_PER_PX = 1.8 / SQ_BODY;
+function sdfSquare() {
+  const n = SQ_BODY + 2 * SQ_PAD, data = new Uint8Array(n * n * 4);
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    // signed distance to the square's edge, positive inside
+    const dx = SQ_BODY / 2 - Math.abs(x + 0.5 - n / 2), dy = SQ_BODY / 2 - Math.abs(y + 0.5 - n / 2);
+    const d = dx > 0 && dy > 0 ? Math.min(dx, dy) : -Math.hypot(Math.min(dx, 0), Math.min(dy, 0));
+    data[(y * n + x) * 4 + 3] = Math.max(0, Math.min(255, 192 + d * 32));
+  }
+  return { width: n, height: n, data };
+}
+/* listing marker radius by zoom, times `size` (a number or an expression);
+   `k` converts it to icon-size for the squares */
+function listingRadius(size, k = 1) {
+  return ["interpolate", ["linear"], ["zoom"],
+    8, ["*", 2.5 * k, size], 12, ["*", 5 * k, size], 15, ["*", 8 * k, size]];
+}
 const SOLD_COLOR = "#52514e";
 // $/sqft surface (p27): one-hue blue ramp, band 0 (cheapest) .. 7. The bands
 // are ordered categories, so the ramp starts at step 250 rather than 100: the
@@ -522,12 +548,25 @@ map.on("load", async () => {
   map.addSource("listings", { type: "geojson", data: EMPTY_FC });
   map.addLayer({
     id: "listings", type: "circle", source: "listings",
+    filter: ["!", CHANGED],
     paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 2.5, 12, 5, 15, 8],
-      "circle-color": ["match", ["get", "status"],
-        "contingent", PENDING_COLOR, "pending", PENDING_COLOR, LISTING_COLOR],
+      "circle-radius": listingRadius(1),
+      "circle-color": LISTING_STATUS_COLOR,
       "circle-stroke-color": "#fcfcfb", "circle-stroke-width": 1.2,
     },
+  });
+  /* listings with an observed price change draw as squares. Circle layers
+     cannot draw squares, so these go in a symbol layer over the same source
+     (the two filters split the listings between them; applyListingFilter).
+     The icon is a signed-distance field so it can take the same data-driven
+     colour and a white halo as the circles' stroke. */
+  map.addImage("sq", sdfSquare(), { sdf: true });
+  map.addLayer({
+    id: "listings-sq", type: "symbol", source: "listings",
+    filter: CHANGED,
+    layout: { "icon-image": "sq", "icon-allow-overlap": true, "icon-ignore-placement": true,
+      "icon-size": listingRadius(1, SQ_PER_PX) },
+    paint: { "icon-color": LISTING_STATUS_COLOR, "icon-halo-color": "#fcfcfb", "icon-halo-width": 1.2 },
   });
 
   map.addSource("sold", { type: "geojson", data: EMPTY_FC });
@@ -764,7 +803,7 @@ function applyOverlays() {
           o.on && y === yr ? "visible" : "none");
       continue;
     }
-    for (const id of [o.id, o.id + "-label", o.id + "-line"])
+    for (const id of [o.id, o.id + "-label", o.id + "-line", o.id + "-sq"])
       if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", vis);
   }
   applyValueMode();
@@ -786,28 +825,30 @@ function applyValueMode() {
   const on = OVERLAYS.find(o => o.id === "value").on;
   // with the watch layer up, the ordinary dots step back so the flagged houses read
   const dim = OVERLAYS.find(o => o.id === "watch").on ? 0.35 : 1;
-  if (!on) {
-    map.setPaintProperty("listings", "circle-color", ["match", ["get", "status"],
-      "contingent", PENDING_COLOR, "pending", PENDING_COLOR, LISTING_COLOR]);
-    map.setPaintProperty("listings", "circle-radius", ["interpolate", ["linear"], ["zoom"], 8, 2.5, 12, 5, 15, 8]);
-    map.setPaintProperty("listings", "circle-opacity", dim);
-    map.setPaintProperty("listings", "circle-stroke-opacity", dim);
-    return;
-  }
+  if (!on) return styleListings(LISTING_STATUS_COLOR, 1, dim, dim);
   const ex = ["get", "excess_pct"], band = ["coalesce", ["get", "local_mae_pct"], ["get", "model_mae_pct"], 6];
   const scored = ["has", "excess_pct"];
   // 0..1 = how far beyond the noise band, saturating 20 points out
   const gap = ["min", 1, ["max", 0, ["/", ["-", ["abs", ex], band], 20]]];
   const size = ["case", ["!", scored], 0.55, ["+", 1, ["*", 1.5, gap]]];
-  map.setPaintProperty("listings", "circle-color", ["case",
+  styleListings(["case",
     ["!", scored], VALUE_UNSCORED,
     ["<", ex, ["-", 0, band]], VALUE_UNDER,
     [">", ex, band], VALUE_OVER,
-    VALUE_NEUTRAL]);
-  map.setPaintProperty("listings", "circle-radius", ["interpolate", ["linear"], ["zoom"],
-    8, ["*", 2.5, size], 12, ["*", 5, size], 15, ["*", 8, size]]);
-  map.setPaintProperty("listings", "circle-opacity", ["*", dim, ["case", scored, 1, 0.5]]);
-  map.setPaintProperty("listings", "circle-stroke-opacity", dim);
+    VALUE_NEUTRAL], size, ["*", dim, ["case", scored, 1, 0.5]], dim);
+}
+
+// same look on both listing layers: the circles and the price-changed squares
+function styleListings(color, size, opacity, strokeOpacity) {
+  map.setPaintProperty("listings", "circle-color", color);
+  map.setPaintProperty("listings", "circle-radius", listingRadius(size));
+  map.setPaintProperty("listings", "circle-opacity", opacity);
+  map.setPaintProperty("listings", "circle-stroke-opacity", strokeOpacity);
+  if (!map.getLayer("listings-sq")) return;
+  map.setPaintProperty("listings-sq", "icon-color", color);
+  map.setLayoutProperty("listings-sq", "icon-size", listingRadius(size, SQ_PER_PX));
+  // icon-opacity covers the halo too; there is no separate halo opacity
+  map.setPaintProperty("listings-sq", "icon-opacity", opacity);
 }
 
 /* "ppsf:190-300,price:250000-600000" -> "$190–300/sqft, $250k–600k asking" */
@@ -981,15 +1022,24 @@ function buildListingFilters() {
   if (age) {
     const days = +age.slice(1);
     // "price change" mode filters on days since the last price change this
-    // tool observed; listings with no observed change are excluded
-    const field = $("agemode").value === "change" ? "days_since_change" : "days_on_market";
-    f.push(age[0] === "n"
-      ? ["<=", ["coalesce", ["get", field], 99999], days]
-      : [">=", ["coalesce", ["get", field], -1], days]);
+    // tool observed; listings with no observed change are excluded. "either"
+    // = listed OR price-changed within the window ("newer than"), and so its
+    // "older than" is the complement: listed that long ago and not changed since.
+    const newer = (field) => ["<=", ["coalesce", ["get", field], 99999], days];
+    const older = (field) => [">=", ["coalesce", ["get", field], -1], days];
+    const mode = $("agemode").value;
+    if (mode === "either")
+      f.push(age[0] === "n"
+        ? ["any", newer("days_on_market"), newer("days_since_change")]
+        : ["all", older("days_on_market"), ["any", ["!", CHANGED], older("days_since_change")]]);
+    else {
+      const field = mode === "change" ? "days_since_change" : "days_on_market";
+      f.push(age[0] === "n" ? newer(field) : older(field));
+    }
   }
   // sold: same price/beds/baths constraints, plus the sold-within horizon
   const g = f.filter(x => { const j = JSON.stringify(x);
-    return !(j.includes('"status"') || j.includes('"days_on_market"')); });
+    return !(j.includes('"status"') || j.includes('"days_on_market"') || j.includes('"days_since_change"')); });
   g.push(["<=", ["coalesce", ["get", "days_since_sold"], 999], +$("soldwin").value]);
   return { listing: f, sold: g };
 }
@@ -997,7 +1047,8 @@ function buildListingFilters() {
 function applyListingFilter() {
   if (!map.getLayer("listings")) return;
   const { listing: f, sold: g } = buildListingFilters();
-  map.setFilter("listings", f.length > 1 ? f : null);
+  map.setFilter("listings", [...f, ["!", CHANGED]]);
+  if (map.getLayer("listings-sq")) map.setFilter("listings-sq", [...f, CHANGED]);
   if (map.getLayer("sold")) map.setFilter("sold", g);
   marketInsights();
 }
@@ -1546,6 +1597,8 @@ function legendDots() {
   } else if (OVERLAYS.find(o => o.id === "listings").on && $("lstatus").value !== "active")
     parts.push(`<span><i style="background:${LISTING_COLOR}"></i>active</span>`,
                `<span><i style="background:${PENDING_COLOR}"></i>contingent/pending</span>`);
+  if (OVERLAYS.find(o => o.id === "listings").on)
+    parts.push(`<span><i class="sq" style="background:${valueOn ? VALUE_NEUTRAL : LISTING_COLOR}"></i>square = asking price has changed</span>`);
   if (OVERLAYS.find(o => o.id === "sold").on)
     parts.push(`<span><i style="background:${SOLD_COLOR}"></i>sold</span>`);
   if (OVERLAYS.find(o => o.id === "ppsf").on) {
@@ -1617,7 +1670,7 @@ function wirePopups() {
       const l = mktData && mktData.listings.find(r => r.wk === wk);
       return popupListing(e.lngLat, l ? l.p : { ...w, status: "active", days_on_market: w.dom, source: "watch list" });
     }
-    feats = tryLayers(["listings", "sold"]);
+    feats = tryLayers(["listings-sq", "listings", "sold"]);
     if (feats.length) return popupListing(e.lngLat, feats[0].properties);
     feats = tryLayers(["housing"]);
     if (feats.length && map.getLayoutProperty("housing", "visibility") === "visible")
@@ -1660,7 +1713,7 @@ function wirePopups() {
       return popupScorecard(e.lngLat, props);
     }
   });
-  for (const id of ["watch", "listings", "sold", "grocery", "amenities", "worship", "housing", "traffic", "speed", "bg-fill"])
+  for (const id of ["watch", "listings", "listings-sq", "sold", "grocery", "amenities", "worship", "housing", "traffic", "speed", "bg-fill"])
     map.on("mouseenter", id, () => map.getCanvas().style.cursor = "pointer");
 }
 
