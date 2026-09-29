@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "accc2f7242";  // replaced with the publish timestamp by publish.sh
+const BUILD = "10ad9bda40";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -15,7 +15,7 @@ const EMPTY_FC = { type: "FeatureCollection", features: [] };
 // worker the first time the overlay is switched on (see ensureSource)
 const LAZY_SRC = { crimetrend: "crime_trend.geojson", parks: "parks.geojson", amenities: "amenities.geojson",
   grocery: "grocery.geojson", worship: "worship.geojson", stripclubs: "stripclubs.geojson",
-  housing: "housing.geojson", districts: "school_districts.geojson" };
+  housing: "housing.geojson", districts: "school_districts.geojson", ppsf: "ppsf_contours.geojson" };
 const loadedSrc = new Set();
 function ensureSource(id) {
   if (loadedSrc.has(id) || !map.getSource(id)) return;
@@ -48,6 +48,11 @@ const DOT_COLORS = {
 const LISTING_COLOR = "#4a3aa7";
 const PENDING_COLOR = "#eb6834";   // contingent / under contract
 const SOLD_COLOR = "#52514e";
+// $/sqft surface (p27): one-hue blue ramp, band 0 (cheapest) .. 7. The bands
+// are ordered categories, so the ramp starts at step 250 rather than 100: the
+// cheapest band must still read as a colour, or "under $100" and "too few
+// sales" (unfilled) look the same.
+const PPSF_RAMP = ["#86b6ef", "#6da7ec", "#5598e7", "#3987e5", "#2a78d6", "#256abf", "#184f95", "#0d366b"];
 // "asking vs model value" mode: listing dots recoloured by the p22 hedonic model
 const VALUE_UNDER = "#1a9850";     // asking below model value (beyond the noise band)
 const VALUE_OVER = "#d7301f";      // asking above model value
@@ -108,6 +113,7 @@ const OVERLAYS = [
   { id: "watch",     label: "Houses to watch",     color: WATCH.move_fast.color, on: false },
   { id: "value",     label: "Asking vs model value", color: VALUE_UNDER, on: false },
   { id: "sold",      label: "Recently sold",      color: SOLD_COLOR, on: false },
+  { id: "ppsf",      label: "Price per sq ft (sold)", color: PPSF_RAMP[4], on: false },
   { id: "racedots",  label: "Racial dot map",     color: DOT_COLORS.white, on: false },
   { id: "trend",     label: "Ethnicity trend 2000→2020", color: DOT_COLORS.black, on: false },
   { id: "gent",      label: "Gentrification 2000→now", color: "#eb6834", on: false },
@@ -379,6 +385,22 @@ map.on("load", async () => {
       "circle-color": ["match", ["get", "kind"],
         "violent", CRIME_COLORS.violent, CRIME_COLORS.property],
     },
+  }, firstLabelLayer());
+
+  /* price per sq ft surface (p27): closed single-family sales, smoothed ~1 km
+     within each municipality, cut into $25 bands. Translucent so the dots
+     and street names stay readable on top; blank = too few sales, not zero. */
+  map.addSource("ppsf", { type: "geojson", data: EMPTY_FC });
+  map.addLayer({
+    id: "ppsf", type: "fill", source: "ppsf", layout: { visibility: "none" },
+    paint: {
+      "fill-color": ["match", ["get", "band"], ...PPSF_RAMP.flatMap((c, i) => [i, c]), "#cccccc"],
+      "fill-opacity": ["interpolate", ["linear"], ["zoom"], 9, 0.72, 14, 0.5],
+    },
+  }, firstLabelLayer());
+  map.addLayer({
+    id: "ppsf-line", type: "line", source: "ppsf", layout: { visibility: "none" },
+    paint: { "line-color": "#ffffff", "line-width": 0.6, "line-opacity": 0.7 },
   }, firstLabelLayer());
 
   map.addSource("parks", { type: "geojson", data: EMPTY_FC });
@@ -666,8 +688,8 @@ function buildPanel() {
     row.querySelector("input").onchange = (e) => {
       o.on = e.target.checked;
       store.set("overlays", OVERLAYS.filter(x => x.on).map(x => x.id));
-      if ((o.id === "trend" || o.id === "gent" || o.id === "crimetrend") && o.on && $("metric").value !== "none") {
-        $("metric").value = "none";   // choropleth would bury the trend tint
+      if (["trend", "gent", "crimetrend", "ppsf"].includes(o.id) && o.on && $("metric").value !== "none") {
+        $("metric").value = "none";   // choropleth would bury the tint (and $/sqft is a blue ramp too)
         store.set("metric", "none");
         applyMetric();
       }
@@ -1512,7 +1534,7 @@ function legendDots() {
   if (OVERLAYS.find(o => o.id === "watch").on) {
     for (const k of ["move_fast", "cut_likely", "room", "below_model"])
       parts.push(`<span><i style="background:${WATCH[k].color}${k === "below_model" ? ";opacity:.55" : ""}"></i>${WATCH[k].short}</span>`);
-    parts.push(`<em class="legend-note">houses to watch (single-family, $250–600k): colour = most urgent reason, dark ring = two reasons · "under model" is the weakest signal, not "underpriced"</em>`);
+    parts.push(`<em class="legend-note">houses to watch (single-family, $250–800k): colour = most urgent reason, dark ring = two reasons · "under model" is the weakest signal, not "underpriced"</em>`);
   }
   const valueOn = OVERLAYS.find(o => o.id === "value").on && OVERLAYS.find(o => o.id === "listings").on;
   if (valueOn) {
@@ -1526,6 +1548,11 @@ function legendDots() {
                `<span><i style="background:${PENDING_COLOR}"></i>contingent/pending</span>`);
   if (OVERLAYS.find(o => o.id === "sold").on)
     parts.push(`<span><i style="background:${SOLD_COLOR}"></i>sold</span>`);
+  if (OVERLAYS.find(o => o.id === "ppsf").on) {
+    const lab = ["< $100", "$100–125", "$125–150", "$150–175", "$175–200", "$200–225", "$225–250", "$250+"];
+    PPSF_RAMP.forEach((c, i) => parts.push(`<span><i style="background:${c}"></i>${lab[i]}</span>`));
+    parts.push(`<em class="legend-note">sold price per sq ft, single-family, last ~90 days · smoothed ~1 km within each city (it breaks at city lines, as prices do) · blank = too few sales, not cheap</em>`);
+  }
   if (OVERLAYS.find(o => o.id === "crimetrend").on)
     parts.push(`<span><i style="background:#67b57e"></i>crime rate fell since 2000</span>`,
                `<span><i style="background:#d03b3b"></i>rose (darker/stronger = bigger change; FBI agency-reported)</span>`);
