@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "0c6292f19c";  // replaced with the publish timestamp by publish.sh
+const BUILD = "971b15199b";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -1158,7 +1158,7 @@ function showBin(c, j, i) {
   const row = it => {
     const p = it.p;
     const st = p.status === "sold" ? `sold ${p.sold_date ?? ""}` : (p.status && p.status !== "active") ? p.status : "active";
-    const link = p.url ? `<a href="${p.url}" target="_blank" rel="noopener">${p.address ?? "?"} ↗</a>` : (p.address ?? "?");
+    const link = p.url ? `<a href="${p.url}" target="_blank" rel="noopener noreferrer">${p.address ?? "?"} ↗</a>` : (p.address ?? "?");
     return `<div class="mkt-item"><b>${ch.val(it.v)}</b> <span class="mkt-addr">${link}<small>${p.city ?? ""} · ${money(p.price)} · ${fmt(p.beds)} bd ${fmt(p.baths)} ba ${p.sqft ? (+p.sqft).toLocaleString() + " sqft" : ""} · ${st}</small></span><button class="mkt-go" data-c="${c}" data-s="${j}" data-i="${i}" data-k="${it.k}" title="show on map">⌖</button></div>`;
   };
   box.innerHTML = `<div class="mkt-list-head"><span>${s.label} ${ch.tick(a)}${top} · ${items.length} ${items.length === 1 ? "listing" : "listings"}</span><button class="mkt-close" data-c="${c}" title="close">×</button></div>` + items.map(row).join("");
@@ -1841,6 +1841,11 @@ async function openDeepLink() {
   if (r) map.once("idle", () => popupListing({ lng, lat }, r.p));
 }
 
+/* Listing links go out with no Referer (rel="noreferrer"): realtor.com turns a
+   detail-page visit referred from another site into a city search, while the
+   same URL pasted or opened without a referrer shows the listing. Only the
+   links -- a page-wide no-referrer policy would also strip it from the map
+   tile requests, which the OSM tile servers require. */
 function popupListing(lngLat, p) {
   const price = p.price ? "$" + (+p.price).toLocaleString() : "—";
   const shareId = String(shareCache.size + 1);
@@ -1880,7 +1885,7 @@ function popupListing(lngLat, p) {
     ${p.status === "sold" && p.list_price ? `<br>asked ${money(p.list_price)}${p.orig_price && p.orig_price !== p.list_price ? ` (first ${money(p.orig_price)})` : ""} · <b style="color:${p.sale_to_list > 0 ? "#d03b3b" : p.sale_to_list < 0 ? "#006300" : "#52514e"}">${p.sale_to_list > 0 ? "+" : ""}${fmt(p.sale_to_list, 1)}%</b>${p.dom != null ? ` · ${fmt(p.dom)} days to contract` : ""}` : ""}
     ${p.status !== "sold" && p.days_to_pending != null ? `<br>under contract after ${fmt(p.days_to_pending)} days` : ""}
     ${p.price_changed ? `<br><b style="color:${p.price_change_pct < 0 ? "#006300" : "#d03b3b"}">${p.price_change_pct < 0 ? "▼" : "▲"} ${Math.abs(p.price_change_pct)}%</b> on ${p.price_changed}` : ""}<br>
-    <a href="${p.url}" target="_blank" rel="noopener">listing ↗ (${p.source})</a>
+    <a href="${p.url}" target="_blank" rel="noopener noreferrer">listing ↗ (${p.source})</a>
     &nbsp;·&nbsp; <button class="share-btn" onclick="shareListing('${shareId}')">Share ⇪</button>
     ${valueLine(p)}
     ${hood}
