@@ -1,24 +1,24 @@
 {
  "scorecard": {
-  "n_pairs": 1066,
-  "median_err_pct": 7.29,
-  "mean_err_pct": 9.36,
-  "p90_err_pct": 20.55,
-  "bias_pct": 0.79,
-  "within_10pct": 62.1,
+  "n_pairs": 1067,
+  "median_err_pct": 7.3,
+  "mean_err_pct": 9.39,
+  "p90_err_pct": 20.59,
+  "bias_pct": 0.83,
+  "within_10pct": 62.0,
   "median_lead_days": 16,
   "first_sale": "2026-09-02",
   "last_sale": "2026-10-01",
-  "auc_above_asking": 0.597,
-  "auc_n": 581,
-  "auc_base_rate": 0.46,
+  "auc_above_asking": 0.595,
+  "auc_n": 582,
+  "auc_base_rate": 0.459,
   "called_cheap_sold_vs_ask_pct": 0.0,
-  "called_dear_sold_vs_ask_pct": -0.58,
-  "signal_spread_pp": 0.58,
+  "called_dear_sold_vs_ask_pct": -0.46,
+  "signal_spread_pp": 0.46,
   "by_tier": {
    "core": {
-    "n": 980,
-    "median_err_pct": 7.32,
+    "n": 981,
+    "median_err_pct": 7.33,
     "bias_pct": 1.34,
     "within_10pct": 62.1
    },
@@ -29,8 +29,8 @@
     "within_10pct": 61.6
    }
   },
-  "holdout_median_err_pct": 6.75,
-  "live_vs_holdout_ratio": 1.08,
+  "holdout_median_err_pct": 6.81,
+  "live_vs_holdout_ratio": 1.07,
   "status": "ok",
   "mode": "backfill \u2014 live log has 12 of 30 pairs so far",
   "live_log": {
@@ -40,88 +40,88 @@
   }
  },
  "model": {
-  "trained_on": 3657,
-  "r2_log": 0.7802,
-  "median_abs_err_pct": 6.75,
-  "mean_abs_err_pct": 8.58,
-  "scored_active": 1877,
+  "trained_on": 3658,
+  "r2_log": 0.776,
+  "median_abs_err_pct": 6.81,
+  "mean_abs_err_pct": 8.68,
+  "scored_active": 1915,
   "ppsf_factor": {
-   "<150": 1.679,
-   "150-190": 0.894,
-   "190-240": 0.926,
-   "240+": 1.251
+   "<150": 1.744,
+   "150-190": 0.861,
+   "190-240": 0.904,
+   "240+": 1.298
   },
   "era_floor_pct": {
-   "<1920": 7.88,
-   "1920-49": 7.84,
-   "1950-79": 6.55,
-   "1980-2009": 6.48,
-   "2010+": 6.47
+   "<1920": 8.23,
+   "1920-49": 8.36,
+   "1950-79": 6.45,
+   "1980-2009": 6.35,
+   "2010+": 6.77
   },
-  "era_Q_over_df": 6.69,
-  "city_Q_over_df": 1.78,
+  "era_Q_over_df": 8.57,
+  "city_Q_over_df": 2.57,
   "city_factor_range": [
-   0.743,
-   1.181
+   0.528,
+   1.302
   ],
   "segment": "ppsf:120-300,price:250000-600000",
-  "asking_premium_pct": 1.8,
+  "asking_premium_pct": 1.9,
   "ptype": "single",
   "tiers": {
    "core": {
     "train": "ppsf:120-300,price:250000-600000",
     "score": "ppsf:120-300,price:250000-600000",
-    "trained_on": 3657,
-    "r2_log": 0.7802,
-    "median_abs_err_pct": 6.75,
-    "mean_abs_err_pct": 8.58,
-    "scored_active": 1612,
+    "trained_on": 3658,
+    "r2_log": 0.776,
+    "median_abs_err_pct": 6.81,
+    "mean_abs_err_pct": 8.68,
+    "scored_active": 1645,
     "ppsf_factor": {
-     "<150": 1.679,
-     "150-190": 0.894,
-     "190-240": 0.926,
-     "240+": 1.251
+     "<150": 1.744,
+     "150-190": 0.861,
+     "190-240": 0.904,
+     "240+": 1.298
     },
     "era_floor_pct": {
-     "<1920": 7.88,
-     "1920-49": 7.84,
-     "1950-79": 6.55,
-     "1980-2009": 6.48,
-     "2010+": 6.47
+     "<1920": 8.23,
+     "1920-49": 8.36,
+     "1950-79": 6.45,
+     "1980-2009": 6.35,
+     "2010+": 6.77
     },
-    "era_Q_over_df": 6.69,
-    "city_Q_over_df": 1.78,
+    "era_Q_over_df": 8.57,
+    "city_Q_over_df": 2.57,
     "city_factor_range": [
-     0.743,
-     1.181
+     0.528,
+     1.302
     ]
    },
    "upper": {
     "train": "ppsf:120-350,price:550000-800000",
     "score": "ppsf:120-350,price:600001-800000",
     "trained_on": 639,
-    "r2_log": 0.2277,
-    "median_abs_err_pct": 6.6,
-    "mean_abs_err_pct": 7.69,
-    "scored_active": 265,
+    "r2_log": 0.2408,
+    "median_abs_err_pct": 6.49,
+    "mean_abs_err_pct": 7.48,
+    "scored_active": 270,
     "ppsf_factor": {
      "150-190": 1.0,
      "190-240": 1.0,
      "240+": 1.0
     },
     "era_floor_pct": {
-     "1950-79": 6.6,
-     "1980-2009": 6.6,
-     "2010+": 6.6
+     "1950-79": 6.47,
+     "1980-2009": 6.43,
+     "2010+": 6.53
     },
-    "era_Q_over_df": 0.17,
-    "city_Q_over_df": 2.31,
+    "era_Q_over_df": 1.09,
+    "city_Q_over_df": 1.24,
     "city_factor_range": [
-     0.713,
-     1.296
+     0.896,
+     1.087
     ]
    }
   }
  },
- "written": "2026-10-01 18:28"
+ "written": "2026-10-01 23:01"
 }
