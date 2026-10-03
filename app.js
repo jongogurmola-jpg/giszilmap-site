@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "971b15199b";  // replaced with the publish timestamp by publish.sh
+const BUILD = "ca844097f9";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -86,6 +86,12 @@ const VALUE_NEUTRAL = "#c9b45a";   // within the model's own error band
 const VALUE_UNSCORED = "#b8b6b0";  // pending, or outside the modelled segment
 let valMeta = null;                // {n, mae, segment, asof} read off valuation.geojson
 // houses-to-watch layer (p26): one colour per reason, in the author's priority order
+// personal reference points drawn as big lettered pins; add or remove entries here
+const PINS = [
+  { letter: "M", label: "18708 Lomond Blvd, Shaker Heights", ll: [-81.547974, 41.461682] },
+  { letter: "J", label: "2464 Traymore Rd, University Heights", ll: [-81.539923, 41.492229] },
+];
+
 const WATCH = {
   move_fast:   { color: "#d7301f", label: "likely under contract within a week", short: "move fast" },
   cut_likely:  { color: "#e6a100", label: "likely to cut price within a week",   short: "cut likely" },
@@ -610,6 +616,16 @@ map.on("load", async () => {
     paint: { "text-color": ["case", ["==", ["get", "watch_primary"], "below_model"], "#7a7870", "#0b0b0b"],
              "text-halo-color": "#fcfcfb", "text-halo-width": 1.4 },
   });
+
+  /* personal reference points: a big lettered pin each (Census-geocoded) */
+  for (const pin of PINS) {
+    const el = document.createElement("div");
+    el.className = "pin-letter";       // MapLibre owns this element's transform,
+    el.innerHTML = `<div><span>${pin.letter}</span></div>`;   // so the teardrop is a child
+    new maplibregl.Marker({ element: el, anchor: "bottom" }).setLngLat(pin.ll)
+      .setPopup(new maplibregl.Popup({ offset: 30 }).setHTML(`<b>${pin.letter}</b> · ${pin.label}`))
+      .addTo(map);
+  }
 
   /* commute destination marker (defaults to NASA Glenn) */
   destMarker = new maplibregl.Marker({ color: "#e34948" }).setLngLat(GLENN)
