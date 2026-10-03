@@ -44,7 +44,7 @@
   "r2_log": 0.7811,
   "median_abs_err_pct": 6.63,
   "mean_abs_err_pct": 8.52,
-  "scored_active": 1951,
+  "scored_active": 1959,
   "ppsf_factor": {
    "<150": 1.684,
    "150-190": 0.857,
@@ -65,7 +65,7 @@
    1.078
   ],
   "segment": "ppsf:120-300,price:250000-600000",
-  "asking_premium_pct": 2.0,
+  "asking_premium_pct": 1.9,
   "ptype": "single",
   "tiers": {
    "core": {
@@ -75,7 +75,7 @@
     "r2_log": 0.7811,
     "median_abs_err_pct": 6.63,
     "mean_abs_err_pct": 8.52,
-    "scored_active": 1683,
+    "scored_active": 1689,
     "ppsf_factor": {
      "<150": 1.684,
      "150-190": 0.857,
@@ -103,7 +103,7 @@
     "r2_log": 0.2182,
     "median_abs_err_pct": 6.43,
     "mean_abs_err_pct": 7.58,
-    "scored_active": 268,
+    "scored_active": 270,
     "ppsf_factor": {
      "150-190": 1.0,
      "190-240": 1.0,
@@ -123,5 +123,5 @@
    }
   }
  },
- "written": "2026-10-03 06:32"
+ "written": "2026-10-03 12:30"
 }
