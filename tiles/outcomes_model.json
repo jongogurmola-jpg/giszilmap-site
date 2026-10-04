@@ -1,61 +1,61 @@
 {
-  "asof": "2026-10-03 12:32:00",
+  "asof": "2026-10-03 18:43:00",
   "horizon_days": 7,
-  "scored_active": 6596,
+  "scored_active": 6601,
   "sale_to_list": {
-    "n_train": 5041,
-    "n_test": 2220,
-    "mae_model_pp": 3.89,
-    "mae_dom_only_pp": 4.03,
-    "mae_predict_median_pp": 4.2,
-    "auc_sells_above_asking": 0.806,
-    "auc_dom_only": 0.768,
-    "auc_day_one_no_timing": 0.661,
-    "band_coverage_raw": 0.526,
-    "band_widened_by_pp": 0.49,
+    "n_train": 5040,
+    "n_test": 2228,
+    "mae_model_pp": 3.88,
+    "mae_dom_only_pp": 4.04,
+    "mae_predict_median_pp": 4.21,
+    "auc_sells_above_asking": 0.808,
+    "auc_dom_only": 0.769,
+    "auc_day_one_no_timing": 0.66,
+    "band_coverage_raw": 0.512,
+    "band_widened_by_pp": 0.52,
     "band_coverage_widened": 0.6
   },
   "p_cut": {
-    "listing_days": 184909,
-    "listings": 10321,
+    "listing_days": 184880,
+    "listings": 10320,
     "base_rate": 0.12,
     "auc": 0.682,
-    "auc_dom_only": 0.61,
-    "brier": 0.1009,
+    "auc_dom_only": 0.611,
+    "brier": 0.101,
     "brier_base_rate": 0.1056,
-    "rate_in_top_decile": 0.257,
+    "rate_in_top_decile": 0.249,
     "calibration": [
       [
-        0.029,
-        0.039
+        0.03,
+        0.04
       ],
       [
         0.067,
-        0.074
+        0.069
       ],
       [
-        0.105,
-        0.106
+        0.106,
+        0.108
       ],
       [
         0.153,
-        0.153
+        0.16
       ],
       [
-        0.241,
-        0.228
+        0.24,
+        0.223
       ]
     ]
   },
   "p_contract": {
-    "listing_days": 184909,
-    "listings": 10321,
-    "base_rate": 0.1023,
-    "auc": 0.742,
-    "auc_dom_only": 0.69,
-    "brier": 0.084,
-    "brier_base_rate": 0.0918,
-    "rate_in_top_decile": 0.318,
+    "listing_days": 184880,
+    "listings": 10320,
+    "base_rate": 0.1024,
+    "auc": 0.749,
+    "auc_dom_only": 0.692,
+    "brier": 0.0835,
+    "brier_base_rate": 0.0919,
+    "rate_in_top_decile": 0.328,
     "calibration": [
       [
         0.016,
@@ -63,19 +63,19 @@
       ],
       [
         0.044,
-        0.049
+        0.048
       ],
       [
-        0.077,
-        0.082
+        0.078,
+        0.072
       ],
       [
-        0.129,
-        0.114
+        0.128,
+        0.119
       ],
       [
-        0.272,
-        0.246
+        0.27,
+        0.253
       ]
     ]
   }
