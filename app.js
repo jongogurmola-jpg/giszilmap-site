@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "a56c8610d8";  // replaced with the publish timestamp by publish.sh
+const BUILD = "5e9894f15c";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -818,7 +818,7 @@ function buildPanel() {
 
   $("dotyear").value = HASH.dotyear ?? store.get("dotyear", "2020");
   $("dotyear").onchange = () => { store.set("dotyear", $("dotyear").value); applyOverlays(); };
-  for (const id of ["schoollevel", "schoolsector"]) {
+  for (const id of ["schoollevel", "schoolsector", "schoolfaith"]) {
     $(id).value = store.get(id, "");
     $(id).onchange = () => { store.set(id, $(id).value); applySchoolFilter(); };
   }
@@ -877,6 +877,10 @@ function applySchoolFilter() {
   const lvl = $("schoollevel").value, sec = $("schoolsector").value;
   if (lvl) f.push(["==", ["get", lvl], 1]);
   if (sec) f.push(["==", ["get", "sector"], sec]);
+  // faith: p28's secular | catholic | religious; "faith" = either religious kind
+  const fa = $("schoolfaith").value;
+  if (fa === "faith") f.push(["in", ["get", "faith"], ["literal", ["catholic", "religious"]]]);
+  else if (fa) f.push(["==", ["get", "faith"], fa]);
   for (const id of ["schools", "schools-label"]) map.setFilter(id, f.length > 1 ? f : null);
 }
 
