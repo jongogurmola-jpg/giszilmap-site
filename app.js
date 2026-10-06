@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "ca844097f9";  // replaced with the publish timestamp by publish.sh
+const BUILD = "a56c8610d8";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -17,10 +17,20 @@ const LAZY_SRC = { crimetrend: "crime_trend.geojson", parks: "parks.geojson", am
   grocery: "grocery.geojson", worship: "worship.geojson", stripclubs: "stripclubs.geojson",
   housing: "housing.geojson", districts: "school_districts.geojson", ppsf: "ppsf_contours.geojson" };
 const loadedSrc = new Set();
+/* schools.geojson (p28): fetched once, used by the Schools layer and by every
+   house pop-up's "likely public schools" line, which needs it even with the
+   layer off */
+let schoolsFC = null, schoolsLoad = null;
+function ensureSchools() {
+  schoolsLoad ??= fetch(tile("schools.geojson")).then(r => r.json()).then(fc => (schoolsFC = fc))
+    .catch(() => { schoolsLoad = null; return EMPTY_FC; });
+  return schoolsLoad;
+}
 function ensureSource(id) {
   if (loadedSrc.has(id) || !map.getSource(id)) return;
   loadedSrc.add(id);
   if (id === "sold") { ensureSold().then(fc => map.getSource("sold")?.setData(fc)); return; }
+  if (id === "schools") { ensureSchools().then(fc => map.getSource("schools")?.setData(fc)); return; }
   if (LAZY_SRC[id]) map.getSource(id).setData(tile(LAZY_SRC[id]));
 }
 // self-heal a stale cached index.html: if the HTML shipped for a different
@@ -41,6 +51,32 @@ try {
 const RAMP = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"];
 // validated all-pairs set; weakest pair (magenta/red, ΔE 13.2) is assigned to
 // the two smallest categories (multi/asian) which rarely mass side by side
+// school markers: public (district, charter, STEM, career) vs private
+const SCHOOL_PUBLIC = "#0e7c86", SCHOOL_PRIVATE = "#b5651d";
+
+/* a book glyph in a coloured disc, drawn once per colour at 2x */
+function bookIcon(fill) {
+  const k = 2, W = 26 * k, c = document.createElement("canvas");
+  c.width = c.height = W;
+  const g = c.getContext("2d");
+  g.beginPath(); g.arc(W / 2, W / 2, W / 2 - 1.2 * k, 0, 2 * Math.PI);
+  g.fillStyle = fill; g.fill();
+  g.lineWidth = 1.6 * k; g.strokeStyle = "#fcfcfb"; g.stroke();
+  // an open book: two pages curving down from the spine
+  g.fillStyle = "#fcfcfb";
+  const cx = W / 2, top = 8 * k, bot = 18 * k, w = 7.5 * k, gap = 0.7 * k;
+  for (const dir of [-1, 1]) {
+    const x0 = cx + dir * gap;
+    g.beginPath();
+    g.moveTo(x0, top + 1.2 * k);
+    g.quadraticCurveTo(x0 + dir * w * 0.5, top - 1.2 * k, x0 + dir * w, top);
+    g.lineTo(x0 + dir * w, bot);
+    g.quadraticCurveTo(x0 + dir * w * 0.5, bot - 1.6 * k, x0, bot + 0.6 * k);
+    g.closePath(); g.fill();
+  }
+  return { width: W, height: W, data: new Uint8Array(g.getImageData(0, 0, W, W).data.buffer) };
+}
+
 const DOT_COLORS = {
   white: "#2a78d6", black: "#008300", hispanic: "#eda100",
   asian: "#e34948", multi: "#e87ba4", other: "#4a3aa7",
@@ -160,6 +196,7 @@ const OVERLAYS = [
   { id: "traffic",   label: "Traffic volume / congestion", color: "#d03b3b", on: false },
   { id: "parks",     label: "Parks",              color: "#008300", on: false },
   { id: "districts", label: "School districts",   color: "#52514e", on: false },
+  { id: "schools",   label: "Schools",            color: SCHOOL_PUBLIC, on: false },
 ];
 
 /* ---------- map bootstrap ---------- */
@@ -575,6 +612,27 @@ map.on("load", async () => {
     paint: { "icon-color": LISTING_STATUS_COLOR, "icon-halo-color": "#fcfcfb", "icon-halo-width": 1.2 },
   });
 
+  map.addImage("book-public", bookIcon(SCHOOL_PUBLIC), { pixelRatio: 2 });
+  map.addImage("book-private", bookIcon(SCHOOL_PRIVATE), { pixelRatio: 2 });
+  map.addSource("schools", { type: "geojson", data: EMPTY_FC });
+  map.addLayer({
+    id: "schools", type: "symbol", source: "schools", minzoom: 9,
+    layout: {
+      "icon-image": ["match", ["get", "sector"], "private", "book-private", "book-public"],
+      "icon-size": ["interpolate", ["linear"], ["zoom"], 9, 0.55, 13, 0.85, 16, 1.1],
+      "icon-allow-overlap": true, "icon-ignore-placement": true,
+    },
+  }, "listings");
+  map.addLayer({
+    id: "schools-label", type: "symbol", source: "schools", minzoom: 13.5,
+    layout: {
+      "text-field": ["get", "name"], "text-size": 10.5, "text-font": ["Noto Sans Regular"],
+      "text-offset": [0, 1.3], "text-anchor": "top", "text-optional": true, "text-max-width": 9,
+    },
+    paint: { "text-color": ["match", ["get", "sector"], "private", "#7a4512", "#0a5258"],
+             "text-halo-color": "#fcfcfb", "text-halo-width": 1.3 },
+  }, "listings");
+
   map.addSource("sold", { type: "geojson", data: EMPTY_FC });
   map.addLayer({
     id: "sold", type: "circle", source: "sold",
@@ -760,6 +818,11 @@ function buildPanel() {
 
   $("dotyear").value = HASH.dotyear ?? store.get("dotyear", "2020");
   $("dotyear").onchange = () => { store.set("dotyear", $("dotyear").value); applyOverlays(); };
+  for (const id of ["schoollevel", "schoolsector"]) {
+    $(id).value = store.get(id, "");
+    $(id).onchange = () => { store.set(id, $(id).value); applySchoolFilter(); };
+  }
+  applySchoolFilter();
   const TDEF = { tmode: "vol", ttime: "day", tday: "wd", thour: "17" };
   for (const id of Object.keys(TDEF)) {
     $(id).value = HASH[id] ?? store.get(id, TDEF[id]);
@@ -806,6 +869,15 @@ function buildPanel() {
     if (!$("panel").classList.toggle("hidden")) marketInsights();
   };
   if (matchMedia("(max-width: 640px)").matches) $("panel").classList.add("hidden");
+}
+
+function applySchoolFilter() {
+  if (!map.getLayer("schools")) return;
+  const f = ["all"];
+  const lvl = $("schoollevel").value, sec = $("schoolsector").value;
+  if (lvl) f.push(["==", ["get", lvl], 1]);
+  if (sec) f.push(["==", ["get", "sector"], sec]);
+  for (const id of ["schools", "schools-label"]) map.setFilter(id, f.length > 1 ? f : null);
 }
 
 function applyOverlays() {
@@ -1638,6 +1710,10 @@ function legendDots() {
     parts.push(`<span><i class="sq" style="background:${valueOn ? VALUE_NEUTRAL : LISTING_COLOR}"></i>square = asking price has changed</span>`);
   if (OVERLAYS.find(o => o.id === "sold").on)
     parts.push(`<span><i style="background:${SOLD_COLOR}"></i>sold</span>`);
+  if (OVERLAYS.find(o => o.id === "schools").on)
+    parts.push(`<span><i style="background:${SCHOOL_PUBLIC}"></i>public school</span>`,
+               `<span><i style="background:${SCHOOL_PRIVATE}"></i>private school</span>`,
+               `<em class="legend-note">book icons · tap one for ratings, students and (private) tuition · filter by level under Overlays</em>`);
   if (OVERLAYS.find(o => o.id === "ppsf").on) {
     const lab = ["< $100", "$100–125", "$125–150", "$150–175", "$175–200", "$200–225", "$225–250", "$250+"];
     PPSF_RAMP.forEach((c, i) => parts.push(`<span><i style="background:${c}"></i>${lab[i]}</span>`));
@@ -1709,6 +1785,9 @@ function wirePopups() {
     }
     feats = tryLayers(["listings-sq", "listings", "sold"]);
     if (feats.length) return popupListing(e.lngLat, feats[0].properties);
+    feats = tryLayers(["schools"]);
+    if (feats.length && map.getLayoutProperty("schools", "visibility") === "visible")
+      return popupSchool(e.lngLat, feats[0].properties);
     feats = tryLayers(["housing"]);
     if (feats.length && map.getLayoutProperty("housing", "visibility") === "visible")
       return popupHousing(e.lngLat, feats[0].properties);
@@ -1750,7 +1829,7 @@ function wirePopups() {
       return popupScorecard(e.lngLat, props);
     }
   });
-  for (const id of ["watch", "listings", "listings-sq", "sold", "grocery", "amenities", "worship", "housing", "traffic", "speed", "bg-fill"])
+  for (const id of ["watch", "listings", "listings-sq", "schools", "sold", "grocery", "amenities", "worship", "housing", "traffic", "speed", "bg-fill"])
     map.on("mouseenter", id, () => map.getCanvas().style.cursor = "pointer");
 }
 
@@ -1862,6 +1941,97 @@ async function openDeepLink() {
    same URL pasted or opened without a referrer shows the listing. Only the
    links -- a page-wide no-referrer policy would also strip it from the map
    tile requests, which the OSM tile servers require. */
+const SCHOOL_KIND = { district: "District public school", charter: "Community (charter) school — public, open enrollment",
+  stem: "STEM school — public", vocational: "Career-technical center — public",
+  "chartered nonpublic": "Private school (state-chartered)", private: "Private school" };
+const stars = v => v == null ? "—" : `${"★".repeat(Math.floor(v))}${v % 1 ? "½" : ""}<span class="dim">${"☆".repeat(5 - Math.ceil(v))}</span> ${v}/5`;
+
+/* students by race/ethnicity as one stacked bar, in the dot map's colours */
+function demoBar(p) {
+  const parts = [["white", p.pct_white], ["black", p.pct_black], ["hispanic", p.pct_hispanic],
+                 ["asian", p.pct_asian], ["multi", p.pct_multi], ["other", p.pct_other]]
+    .filter(([, v]) => v != null && v > 0);
+  if (!parts.length) return "";
+  const bar = parts.map(([k, v]) => `<i style="width:${v}%;background:${DOT_COLORS[k]}" title="${k} ${v}%"></i>`).join("");
+  const txt = parts.filter(([, v]) => v >= 3).map(([k, v]) => `${k} ${Math.round(v)}%`).join(" · ");
+  return `<div class="demo-bar">${bar}</div><div class="dim">${txt}</div>`;
+}
+
+function popupSchool(lngLat, p) {
+  const row = (k, v) => v == null || v === "—" ? "" : `<tr><td>${k}</td><td>${v}</td></tr>`;
+  const pct = v => v == null ? null : `${fmt(v, v < 10 ? 1 : 0)}%`;
+  let body = "";
+  if (p.sector === "public") {
+    body = `<table class="sch-table">
+      ${row("Overall rating", stars(p.stars_overall))}
+      ${row("Achievement", p.stars_achievement != null ? `${stars(p.stars_achievement)} · PI ${fmt(p.pi_pct, 1)}%` : null)}
+      ${row("Progress (growth)", p.stars_progress != null ? stars(p.stars_progress) : null)}
+      ${row("Gap closing", p.stars_gap != null ? stars(p.stars_gap) : null)}
+      ${row("Early literacy", p.stars_early_lit != null ? stars(p.stars_early_lit) : null)}
+      ${row("Graduation", p.grad4 != null ? `${fmt(p.grad4, 1)}% in 4 years` : null)}
+      ${row("College/career ready", p.stars_ccwmr != null ? stars(p.stars_ccwmr) : null)}
+      ${row("Attendance", pct(p.attendance))}
+      ${row("Chronically absent", pct(p.chronic_abs))}
+      ${row("Economically disadvantaged", pct(p.econ_dis_pct))}
+    </table>
+    <div class="dim">Ohio School Report Card ${p.demo_year ?? "2024-25"}. PI = Performance Index, share of the maximum test score; Ohio's top districts run 85–95%.</div>`;
+    if (p.stars_overall == null && p.pi_pct == null)
+      body = `<div class="dim">No report-card ratings for this building (too new, too small, or a special-purpose program).</div>` + body;
+  } else {
+    const tu = p.tuition_high != null
+      ? `<b>${money(p.tuition_low)}${p.tuition_high !== p.tuition_low ? "–" + money(p.tuition_high) : ""}</b>/yr`
+        + `${p.tuition_year ? ` (${p.tuition_year})` : ""}${p.tuition_basis ? `<br><span class="dim">${p.tuition_basis}</span>` : ""}`
+        + `${p.tuition_status === "aggregator" ? `<br><span class="dim">third-party estimate, not the school's own figure</span>` : ""}`
+      : `<span class="dim">${p.tuition_status === "not_found" ? "not published — ask the school" : "not yet researched"}</span>`;
+    body = `<table class="sch-table">
+      ${row("Tuition", tu)}
+      ${row("EdChoice scholarships", p.edchoice && p.edchoice !== "unknown" ? p.edchoice : null)}
+      ${row("Affiliation", p.affiliation)}
+      ${row("Students per teacher", p.st_ratio != null ? fmt(p.st_ratio, 1) : null)}
+    </table>
+    ${p.tuition_notes ? `<div class="dim">${p.tuition_notes}</div>` : ""}
+    ${p.tuition_source ? `<a href="${p.tuition_source}" target="_blank" rel="noopener noreferrer">tuition source ↗</a><br>` : ""}
+    <div class="dim">Private schools publish no common test results; Ohio's report cards cover public schools only.${p.demo_year ? ` Enrollment and demographics: NCES Private School Survey ${p.demo_year}.` : ""}</div>`;
+  }
+  new maplibregl.Popup({ maxWidth: "360px" }).setLngLat(lngLat).setHTML(`
+    <h3><span class="sch-dot" style="background:${p.sector === "private" ? SCHOOL_PRIVATE : SCHOOL_PUBLIC}"></span>${p.name}</h3>
+    ${SCHOOL_KIND[p.kind] ?? ""}${p.district && p.sector === "public" ? ` · ${p.district}` : ""}<br>
+    grades ${p.grades ?? "not reported"}${p.grades_guessed ? " (from its name)" : ""}${p.enrollment != null ? ` · ${(+p.enrollment).toLocaleString()} students` : ""}<br>
+    <span class="dim">${p.address ?? ""}</span>
+    ${demoBar(p)}
+    ${body}`).addTo(map);
+}
+
+/* The public schools most likely to serve a house: the nearest elementary,
+   middle and high school run by the house's own school district. Ohio does
+   not publish attendance zones, so this is a best guess, said as such; in
+   one-high-school districts the high school is certain, elementary less so. */
+function likelySchoolsHtml(lngLat, bg) {
+  if (!schoolsFC || !bg || bg.sd_irn == null) return "";
+  const own = schoolsFC.features.filter(f => f.properties.kind === "district"
+    && +f.properties.district_irn === +bg.sd_irn);
+  if (!own.length) return "";
+  const mi = f => {
+    const [x, y] = f.geometry.coordinates, k = Math.PI / 180;
+    const dx = (x - lngLat.lng) * Math.cos(lngLat.lat * k) * 69.17, dy = (y - lngLat.lat) * 69.17;
+    return Math.hypot(dx, dy);
+  };
+  const pick = lvl => own.filter(f => f.properties[lvl] === 1 && f.properties.lo != null)
+    .sort((a, b) => mi(a) - mi(b))[0];
+  const rows = [], seen = new Set();
+  for (const [lvl, label] of [["elem", "Elementary"], ["mid", "Middle"], ["high", "High"]]) {
+    const f = pick(lvl);
+    if (!f) continue;
+    const q = f.properties;
+    if (seen.has(q.id)) { rows[rows.length - 1].label += " & " + label.toLowerCase(); continue; }
+    seen.add(q.id);
+    rows.push({ label, html: `${q.name} <span class="dim">(${q.grades}) · ${mi(f).toFixed(1)} mi · ${q.stars_overall != null ? "★" + q.stars_overall : "unrated"}</span>` });
+  }
+  return `<div class="hood"><b>Likely public schools</b> — ${own[0].properties.district}<br>`
+    + rows.map(r => `${r.label}: ${r.html}`).join("<br>")
+    + `<br><span style="font-size:10.5px">nearest of each level in the district; attendance zones aren't published, so confirm with the district</span></div>`;
+}
+
 function popupListing(lngLat, p) {
   const price = p.price ? "$" + (+p.price).toLocaleString() : "—";
   const shareId = String(shareCache.size + 1);
@@ -1887,6 +2057,12 @@ function popupListing(lngLat, p) {
     ? `<span style="color:${SOLD_COLOR}">SOLD ${p.sold_date ?? ""}</span> · `
     : (p.status && p.status !== "active")
       ? `<span style="color:${PENDING_COLOR}">${p.status.toUpperCase()}</span> · ` : "";
+  const schoolsId = "sch-" + shareId;
+  const schoolsBlock = schoolsFC ? likelySchoolsHtml(lngLat, bg) : `<div id="${schoolsId}"></div>`;
+  if (!schoolsFC && bg) ensureSchools().then(() => {
+    const el = document.getElementById(schoolsId);
+    if (el) el.outerHTML = likelySchoolsHtml(lngLat, bg);
+  });
   const photo = p.photo
     ? `<img src="${p.photo}" loading="lazy" alt="" referrerpolicy="no-referrer"
          style="width:100%;max-height:200px;object-fit:cover;border-radius:5px;margin-bottom:6px"
@@ -1905,6 +2081,7 @@ function popupListing(lngLat, p) {
     &nbsp;·&nbsp; <button class="share-btn" onclick="shareListing('${shareId}')">Share ⇪</button>
     ${valueLine(p)}
     ${hood}
+    ${schoolsBlock}
     ${taxLine}
   `).addTo(map);
 }
