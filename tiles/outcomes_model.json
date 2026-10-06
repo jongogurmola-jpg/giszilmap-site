@@ -1,49 +1,49 @@
 {
-  "asof": "2026-10-05 16:14:00",
+  "asof": "2026-10-05 18:33:00",
   "horizon_days": 7,
-  "scored_active": 6545,
+  "scored_active": 6543,
   "sale_to_list": {
     "n_train": 5146,
-    "n_test": 2119,
-    "mae_model_pp": 3.93,
+    "n_test": 2122,
+    "mae_model_pp": 3.91,
     "mae_dom_only_pp": 4.08,
     "mae_predict_median_pp": 4.26,
-    "auc_sells_above_asking": 0.81,
+    "auc_sells_above_asking": 0.814,
     "auc_dom_only": 0.776,
-    "auc_day_one_no_timing": 0.674,
-    "band_coverage_raw": 0.506,
-    "band_widened_by_pp": 0.57,
+    "auc_day_one_no_timing": 0.666,
+    "band_coverage_raw": 0.515,
+    "band_widened_by_pp": 0.5,
     "band_coverage_widened": 0.6
   },
   "p_cut": {
     "listing_days": 198018,
     "listings": 10455,
-    "base_rate": 0.1201,
+    "base_rate": 0.1202,
     "auc": 0.685,
-    "auc_dom_only": 0.612,
-    "brier": 0.1007,
+    "auc_dom_only": 0.611,
+    "brier": 0.1009,
     "brier_base_rate": 0.1057,
-    "rate_in_top_decile": 0.262,
+    "rate_in_top_decile": 0.255,
     "calibration": [
       [
         0.029,
-        0.036
+        0.038
       ],
       [
         0.067,
-        0.072
+        0.068
       ],
       [
         0.105,
         0.112
       ],
       [
-        0.152,
-        0.149
+        0.153,
+        0.159
       ],
       [
-        0.239,
-        0.23
+        0.241,
+        0.224
       ]
     ]
   },
@@ -52,29 +52,29 @@
     "listings": 10455,
     "base_rate": 0.1027,
     "auc": 0.745,
-    "auc_dom_only": 0.692,
-    "brier": 0.084,
+    "auc_dom_only": 0.691,
+    "brier": 0.0841,
     "brier_base_rate": 0.0922,
-    "rate_in_top_decile": 0.321,
+    "rate_in_top_decile": 0.322,
     "calibration": [
       [
         0.017,
-        0.02
+        0.019
       ],
       [
         0.045,
-        0.05
+        0.049
       ],
       [
-        0.078,
-        0.078
+        0.079,
+        0.079
       ],
       [
-        0.128,
-        0.116
+        0.129,
+        0.117
       ],
       [
-        0.272,
+        0.27,
         0.25
       ]
     ]
