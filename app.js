@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "bde738dfdd";  // replaced with the publish timestamp by publish.sh
+const BUILD = "afa991971a";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -183,7 +183,7 @@ const OVERLAYS = [
   { id: "sold",      label: "Recently sold",      color: SOLD_COLOR, on: false },
   { id: "ppsf",      label: "Price per sq ft (sold)", color: PPSF_RAMP[4], on: false },
   { id: "racedots",  label: "Racial dot map",     color: DOT_COLORS.white, on: false },
-  { id: "trend",     label: "Ethnicity trend 2000→2020", color: DOT_COLORS.black, on: false },
+  { id: "trend",     label: "Ethnicity trend",    color: DOT_COLORS.black, on: false },
   { id: "gent",      label: "Gentrification 2000→now", color: "#eb6834", on: false },
   { id: "crimetrend", label: "Crime change 2000→now", color: "#d03b3b", on: false },
   { id: "crimepts",  label: "Crime incidents",    color: CRIME_COLORS.violent, on: false },
@@ -312,14 +312,19 @@ map.on("load", async () => {
   trafficProfiles = await fetch(tile("traffic_profiles.json"))
     .then(r => r.ok ? r.json() : null).catch(() => null);
   const CATS = ["white", "black", "hispanic", "asian", "multi", "other"];
+  // each block group's biggest share gain: g_* over 2000->2020 (d_*), ga_* over
+  // 2020 census -> 2020-24 ACS (a_*, already nulled by p14 where within the
+  // ACS margin of error; under 2 points is not shaded)
   for (const f of bgData.features) {
     const p = f.properties;
-    let best = null, bv = 0;
-    for (const c of CATS) {
-      const v = p["d_" + c];
-      if (v != null && v > bv) { bv = v; best = c; }
+    for (const [pre, out, min] of [["d_", "g", 0], ["a_", "ga", 2]]) {
+      let best = null, bv = min;
+      for (const c of CATS) {
+        const v = p[pre + c];
+        if (v != null && v > bv) { bv = v; best = c; }
+      }
+      p[out + "_cat"] = best; p[out + "_pp"] = best ? bv : null;
     }
-    p.g_cat = best; p.g_pp = best ? bv : null;
   }
   window.__trendCount = bgData.features.filter(f => f.properties.g_cat).length;
   window.__map = map;  // debugging hook
@@ -382,7 +387,8 @@ map.on("load", async () => {
   });
 
   /* overlays */
-  for (const yr of ["2020", "2010", "2000"]) {
+  // "acs" = ACS 2020-24 counts placed on the 2020 block pattern (p02 --year acs)
+  for (const yr of ["acs", "2020", "2010", "2000"]) {
     map.addSource("racedots" + yr, { type: "vector", url: `pmtiles://tiles/race_dots_${yr}.pmtiles` });
     map.addLayer({
       id: "racedots" + yr, type: "circle", source: "racedots" + yr, "source-layer": "dots",
@@ -818,6 +824,9 @@ function buildPanel() {
 
   $("dotyear").value = HASH.dotyear ?? store.get("dotyear", "2020");
   $("dotyear").onchange = () => { store.set("dotyear", $("dotyear").value); applyOverlays(); };
+  $("trendperiod").value = store.get("trendperiod", "2000");
+  $("trendperiod").onchange = () => { store.set("trendperiod", $("trendperiod").value); applyTrendPeriod(); legendDots(); };
+  applyTrendPeriod();
   for (const id of ["schoollevel", "schoolsector", "schoolfaith"]) {
     $(id).value = store.get(id, "");
     $(id).onchange = () => { store.set(id, $(id).value); applySchoolFilter(); };
@@ -871,6 +880,18 @@ function buildPanel() {
   if (matchMedia("(max-width: 640px)").matches) $("panel").classList.add("hidden");
 }
 
+/* the trend layer shows one period at a time: g_* (2000->2020) or ga_* (2020->ACS) */
+function applyTrendPeriod() {
+  if (!map.getLayer("trend")) return;
+  const k = $("trendperiod").value === "acs" ? "ga" : "g";
+  map.setPaintProperty("trend", "fill-color", ["match", ["coalesce", ["get", k + "_cat"], "none"],
+    "white", DOT_COLORS.white, "black", DOT_COLORS.black,
+    "hispanic", DOT_COLORS.hispanic, "asian", DOT_COLORS.asian,
+    "multi", DOT_COLORS.multi, "other", DOT_COLORS.other, "rgba(0,0,0,0)"]);
+  map.setPaintProperty("trend", "fill-opacity", ["interpolate", ["linear"],
+    ["coalesce", ["get", k + "_pp"], 0], 0, 0.05, 5, 0.25, 15, 0.55, 35, 0.85]);
+}
+
 function applySchoolFilter() {
   if (!map.getLayer("schools")) return;
   const f = ["all"];
@@ -890,7 +911,7 @@ function applyOverlays() {
     if (o.on) ensureSource(o.id);
     if (o.id === "racedots") {
       const yr = $("dotyear").value;
-      for (const y of ["2020", "2010", "2000"])
+      for (const y of ["acs", "2020", "2010", "2000"])
         map.setLayoutProperty("racedots" + y, "visibility",
           o.on && y === yr ? "visible" : "none");
       continue;
@@ -1717,7 +1738,9 @@ function legendDots() {
   if (OVERLAYS.find(o => o.id === "trend").on) {
     for (const [k, c] of Object.entries(DOT_COLORS))
       parts.push(`<span><i style="background:${c}"></i>${k}</span>`);
-    parts.push(`<em class="legend-note">= group with biggest share gain since 2000; darker = larger gain</em>`);
+    parts.push($("trendperiod").value === "acs"
+      ? `<em class="legend-note">= group with the biggest share gain, 2020 census → 2020-24 ACS; darker = larger gain · only gains of 2+ points beyond the survey's margin of error are shaded</em>`
+      : `<em class="legend-note">= group with biggest share gain since 2000; darker = larger gain</em>`);
   }
   if (OVERLAYS.find(o => o.id === "speed").on) {
     for (const [, c, lab] of SPEED_BINS)
@@ -2155,6 +2178,7 @@ function popupScorecard(lngLat, p) {
           for (const c of ["white","black","hispanic","asian","multi","other"]) {
             const v = p["d_" + c]; if (v != null && v < wv) { wv = v; w = c; } }
           return w ? `, ${w} ${fmt(wv, 1)}pp` : ""; })() : ""}
+      ${p.ga_cat ? `<br>2020→2024 ACS: ${p.ga_cat} +${fmt(p.ga_pp, 1)}pp` : ""}
     </div>
   `).addTo(map);
 }
