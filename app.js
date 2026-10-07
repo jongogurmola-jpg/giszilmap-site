@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "762ab2a603";  // replaced with the publish timestamp by publish.sh
+const BUILD = "bde738dfdd";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -1984,7 +1984,7 @@ function popupSchool(lngLat, p) {
       ? `<b>${money(p.tuition_low)}${p.tuition_high !== p.tuition_low ? "–" + money(p.tuition_high) : ""}</b>/yr`
         + `${p.tuition_year ? ` (${p.tuition_year})` : ""}${p.tuition_basis ? `<br><span class="dim">${p.tuition_basis}</span>` : ""}`
         + `${p.tuition_status === "aggregator" ? `<br><span class="dim">third-party estimate, not the school's own figure</span>` : ""}`
-      : `<span class="dim">${p.tuition_status === "not_found" ? "not published — ask the school" : "not yet researched"}</span>`;
+      : `<span class="dim">${p.tuition_status === "not_found" ? "not published — ask the school" : "no tuition on file"}</span>`;
     body = `<table class="sch-table">
       ${row("Tuition", tu)}
       ${row("EdChoice scholarships", p.edchoice && p.edchoice !== "unknown" ? p.edchoice : null)}
