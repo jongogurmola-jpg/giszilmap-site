@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "5e9894f15c";  // replaced with the publish timestamp by publish.sh
+const BUILD = "762ab2a603";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -960,21 +960,6 @@ function segLabel(seg) {
    value-model reason last and quiet, since that gap is mostly what the model
    cannot see. Badges for as-is remarks and full point-of-sale inspection
    cities (escrow obligations for a buyer). */
-function watchLine(p) {
-  if (!p.watch_primary) return "";
-  const pc = v => `${Math.round(100 * v)}%`;
-  const rs = [];
-  if (p.w_move_fast) rs.push(`<b style="color:${WATCH.move_fast.color}">⚡ ${WATCH.move_fast.label}</b> (${pc(p.p_contract_7d)})`);
-  if (p.w_cut_likely) rs.push(`<b style="color:${WATCH.cut_likely.color}">✂ ${WATCH.cut_likely.label}</b> (${pc(p.p_cut_7d)})`);
-  if (p.w_room) rs.push(`<b style="color:${WATCH.room.color}">${WATCH.room.label}</b>: ${(+p.exp_stl_pct).toFixed(1)}% (${(+p.stl_lo).toFixed(1)} to ${(+p.stl_hi).toFixed(1)}%)${p.exp_room_dollars ? `, about ${money(p.exp_room_dollars)}` : ""}`);
-  if (p.w_below_model) rs.push(`<span style="color:#7a7870">${WATCH.below_model.label}</span>`);
-  const badges = [];
-  if (+p.pos_tier === 2) badges.push(`<span class="badge">point-of-sale inspection city</span>`);
-  if (+p.kw_asis === 1) badges.push(`<span class="badge">listed as-is / TLC</span>`);
-  return `<div class="hood value-pop"><b>On the watch list${p.watch_n_reasons > 1 ? ` — ${p.watch_n_reasons} reasons` : ""}</b>` +
-    rs.map(r => `<br>${r}`).join("") + (badges.length ? `<br>${badges.join(" ")}` : "") + `</div>`;
-}
-
 /* Sidebar line on the value model: what it was fit on, how well it held
    out, and -- once scored listings have closed -- how its calls graded
    against real sales (p23). The backtest numbers are the ones that matter:
@@ -1961,6 +1946,19 @@ function demoBar(p) {
   return `<div class="demo-bar">${bar}</div><div class="dim">${txt}</div>`;
 }
 
+/* website, district site and (public) the state's report-card page, built
+   from the building IRN */
+function schoolLinks(p) {
+  const a = (href, t) => `<a href="${href}" target="_blank" rel="noopener noreferrer">${t} ↗</a>`;
+  const l = [];
+  if (p.website) l.push(a(p.website, "website"));
+  if (p.district_website && p.district_website !== p.website) l.push(a(p.district_website, "district site"));
+  const irn = /^irn:(\d+)$/.exec(p.id ?? "");
+  if (p.sector === "public" && irn)
+    l.push(a(`https://reportcard.education.ohio.gov/building/overview/${irn[1].padStart(6, "0")}`, "Ohio report card"));
+  return l.length ? `<div class="sch-links">${l.join(" · ")}</div>` : "";
+}
+
 function popupSchool(lngLat, p) {
   const row = (k, v) => v == null || v === "—" ? "" : `<tr><td>${k}</td><td>${v}</td></tr>`;
   const pct = v => v == null ? null : `${fmt(v, v < 10 ? 1 : 0)}%`;
@@ -2001,7 +1999,8 @@ function popupSchool(lngLat, p) {
     <h3><span class="sch-dot" style="background:${p.sector === "private" ? SCHOOL_PRIVATE : SCHOOL_PUBLIC}"></span>${p.name}</h3>
     ${SCHOOL_KIND[p.kind] ?? ""}${p.district && p.sector === "public" ? ` · ${p.district}` : ""}<br>
     grades ${p.grades ?? "not reported"}${p.grades_guessed ? " (from its name)" : ""}${p.enrollment != null ? ` · ${(+p.enrollment).toLocaleString()} students` : ""}<br>
-    <span class="dim">${p.address ?? ""}</span>
+    <span class="dim">${p.address ?? ""}</span><br>
+    ${schoolLinks(p)}
     ${demoBar(p)}
     ${body}`).addTo(map);
 }
@@ -2031,9 +2030,9 @@ function likelySchoolsHtml(lngLat, bg) {
     seen.add(q.id);
     rows.push({ label, html: `${q.name} <span class="dim">(${q.grades}) · ${mi(f).toFixed(1)} mi · ${q.stars_overall != null ? "★" + q.stars_overall : "unrated"}</span>` });
   }
-  return `<div class="hood"><b>Likely public schools</b> — ${own[0].properties.district}<br>`
-    + rows.map(r => `${r.label}: ${r.html}`).join("<br>")
-    + `<br><span style="font-size:10.5px">nearest of each level in the district; attendance zones aren't published, so confirm with the district</span></div>`;
+  return `<div class="hood" title="Nearest school of each level in the house's district. Ohio doesn't publish attendance zones, so confirm with the district.">`
+    + `<b>Likely public schools</b> (${own[0].properties.district})<br>`
+    + rows.map(r => `${r.label}: ${r.html}`).join("<br>") + `</div>`;
 }
 
 function popupListing(lngLat, p) {
@@ -2093,39 +2092,36 @@ function popupListing(lngLat, p) {
 /* Model verdict for the popup: asking vs the p22 hedonic estimate. Gaps
    inside the house's own noise band (local_mae_pct) are called "about
    right" rather than dressed up as a weak signal. */
+/* The model results in two lines. Line 1: the value model -- its estimate
+   and how far asking sits from it -- and the outcome model's likely sale.
+   Line 2: the 7-day odds and any watch-list flag. The caveats (noise band,
+   peer re-centring, what the models can't see) live in the tooltip. */
 function valueLine(p) {
-  if (p.excess_pct == null || !p.pred_price || !p.price) return watchLine(p);
-  const band = p.local_mae_pct ?? p.model_mae_pct ?? 6;
   const sp = v => (v > 0 ? "+" : "") + (+v).toFixed(1) + "%";
-  // raw gap: what the seller asks vs what the model says the house sells for
-  const raw = 100 * (p.price / p.pred_price - 1), gapD = p.price - p.pred_price;
-  const rawCol = raw < -band ? VALUE_UNDER : raw > band ? VALUE_OVER : "#52514e";
-  const head = `Model value <b>${money(p.pred_price)}</b>${p.sqft > 0 ? ` ($${Math.round(p.pred_price / p.sqft).toLocaleString()}/sqft)` : ""}` +
-    ` · asking is <b style="color:${rawCol}">${sp(raw)} (${gapD < 0 ? "−" : "+"}${money(Math.abs(gapD))})</b> ${raw < 0 ? "below" : "above"} it`;
-  // excess_pct is that gap re-centred on the house's $/sqft band: the model
-  // under-values the dear end and over-values the cheap end, and p22 removes
-  // the band median so the overlay ranks houses against their peers
-  const ex = +p.excess_pct, off = raw - ex;
-  const peer = ex < -band ? `<b style="color:${VALUE_UNDER}">${Math.abs(ex).toFixed(1)}% below</b> its peers`
-    : ex > band ? `<b style="color:${VALUE_OVER}">${ex.toFixed(1)}% above</b> its peers`
-    : `<b>${sp(ex)}</b> vs peers, inside the ±${(+band).toFixed(1)}% noise band`;
-  const adj = Math.abs(off) >= 1
-    ? `listings at this $/sqft typically ask ${sp(off)} vs the model, so it sits ${peer}`
-    : `vs peers at this $/sqft: ${peer}`;
-  const rel = p.rel_discount != null ? ` · vs its county/type/price band ${sp(p.rel_discount)}` : "";
-  const rank = p.pctile != null
-    ? (p.pctile <= 50 ? `cheapest ${Math.max(1, Math.round(p.pctile))}%` : `priciest ${Math.max(1, Math.round(100 - p.pctile))}%`)
-      + " of scored listings by raw gap" : "";
-  let outcome = watchLine(p);
-  if (p.exp_stl_pct != null) {
-    const col = p.exp_stl_pct < -0.5 ? VALUE_UNDER : p.exp_stl_pct > 0.5 ? VALUE_OVER : "#52514e";
-    outcome += `<div class="hood value-pop">Likely sale <b>${money(p.exp_sale_price)}</b> · <b style="color:${col}">${sp(p.exp_stl_pct)}</b> vs asking` +
-      (p.stl_lo != null ? ` <span class="popup-kv">(20–80% band ${sp(p.stl_lo)} to ${sp(p.stl_hi)})</span>` : "") +
-      (p.p_cut_7d != null ? `<br>next 7 days: <b>${Math.round(100 * p.p_cut_7d)}%</b> chance of a price cut · <b>${Math.round(100 * p.p_contract_7d)}%</b> chance it goes under contract` : "") +
-      `<br><span style="font-size:10.5px">outcome model: takes the asking price as given, ages with days on market</span></div>`;
+  const band = p.local_mae_pct ?? p.model_mae_pct ?? 6;
+  const l1 = [], l2 = [];
+  if (p.excess_pct != null && p.pred_price && p.price) {
+    const raw = 100 * (p.price / p.pred_price - 1);
+    const col = raw < -band ? VALUE_UNDER : raw > band ? VALUE_OVER : "#52514e";
+    l1.push(`Model <b>${money(p.pred_price)}</b> · asking <b style="color:${col}">${sp(raw)}</b>`);
   }
-  return outcome + `<div class="hood value-pop">${head}<br>${adj}${rel}` +
-    `<br><span style="font-size:10.5px">${rank ? rank + " · " : ""}hedonic model of recent sales, typical error ±${(+band).toFixed(1)}% here · sellers usually price in what the model can't see: a big gap is an unusual price for the stats, not proof of mispricing</span></div>`;
+  if (p.exp_stl_pct != null)
+    l1.push(`likely sale <b>${money(p.exp_sale_price)}</b> (${sp(p.exp_stl_pct)})`);
+  if (p.p_cut_7d != null)
+    l2.push(`7-day odds: cut <b>${Math.round(100 * p.p_cut_7d)}%</b> · contract <b>${Math.round(100 * p.p_contract_7d)}%</b>`);
+  if (p.watch_primary) {
+    const w = [p.w_move_fast && "⚡ moving fast", p.w_cut_likely && "✂ cut likely",
+               p.w_room && "room to negotiate", p.w_below_model && "below model"].filter(Boolean);
+    l2.push(`<b style="color:${WATCH[p.watch_primary]?.color ?? "#52514e"}">watch: ${w.join(", ")}</b>`);
+  }
+  if (+p.kw_asis === 1) l2.push(`as-is/TLC`);
+  if (+p.pos_tier === 2) l2.push(`point-of-sale inspection city`);
+  if (!l1.length && !l2.length) return "";
+  const tip = `Value model: hedonic model of recent sales, typical error ±${(+band).toFixed(1)}% here` +
+    (p.excess_pct != null ? `; ${sp(p.excess_pct)} vs listings at its $/sqft` : "") +
+    `. Sellers usually price in what the model can't see, so a big gap is an unusual price, not proof of a bargain.` +
+    (p.stl_lo != null ? ` Likely-sale range ${sp(p.stl_lo)} to ${sp(p.stl_hi)} vs asking.` : "");
+  return `<div class="hood value-pop" title="${tip}">${l1.join(" · ")}${l1.length && l2.length ? "<br>" : ""}${l2.join(" · ")}</div>`;
 }
 
 function popupScorecard(lngLat, p) {
