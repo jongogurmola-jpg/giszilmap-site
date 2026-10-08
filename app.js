@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "054fe42b36";  // replaced with the publish timestamp by publish.sh
+const BUILD = "f49e652337";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -919,6 +919,16 @@ function applyTrendPeriod() {
     "multi", DOT_COLORS.multi, "other", DOT_COLORS.other, "rgba(0,0,0,0)"]);
   map.setPaintProperty("trend", "fill-opacity", ["interpolate", ["linear"],
     ["coalesce", ["get", k + "_pp"], 0], 0, 0.05, 5, 0.25, 15, 0.55, 35, 0.85]);
+}
+
+/* A Google Maps search for a place's name at its own location: opens the
+   place's Google listing (ratings, reviews, hours, photos) without our
+   storing any Google data. */
+function gmapsLink(name, coords) {
+  if (!name || !coords) return "";
+  const [x, y] = coords;
+  return `<a href="https://www.google.com/maps/search/${encodeURIComponent(name)}/@${y.toFixed(6)},${x.toFixed(6)},17z" `
+    + `target="_blank" rel="noopener noreferrer">Google Maps & reviews ↗</a>`;
 }
 
 function applyFoodFilter() {
@@ -1848,7 +1858,8 @@ function wirePopups() {
     feats = tryLayers(["food"]);
     if (feats.length && map.getLayoutProperty("food", "visibility") === "visible") {
       const p = feats[0].properties;
-      const web = p.website ? `<br><a href="${/^https?:/.test(p.website) ? p.website : "https://" + p.website}" target="_blank" rel="noopener noreferrer">website ↗</a>` : "";
+      const web = `<br>${gmapsLink(p.name, feats[0].geometry.coordinates)}` + (p.website
+        ? ` · <a href="${/^https?:/.test(p.website) ? p.website : "https://" + p.website}" target="_blank" rel="noopener noreferrer">website ↗</a>` : "");
       return new maplibregl.Popup({ maxWidth: "300px" }).setLngLat(e.lngLat).setHTML(
         `<b>${p.name}</b><br><span style="color:${FOOD[p.kind]?.[0]}">${FOOD[p.kind]?.[1] ?? p.kind}</span>${+p.chain === 1 ? " · chain" : ""}`
         + `${p.address ? `<br><span class="dim">${p.address}</span>` : ""}`
@@ -1858,7 +1869,9 @@ function wirePopups() {
     if (feats.length) {
       const p = feats[0].properties;
       return new maplibregl.Popup().setLngLat(e.lngLat)
-        .setHTML(`<b>${p.name ?? p.chain ?? "(unnamed)"}</b><br>${p.chain ?? p.kind ?? p.religion ?? ""} ${p.denomination ?? ""}`)
+        .setHTML(`<b>${p.name ?? p.chain ?? "(unnamed)"}</b><br>${p.chain ?? String(p.kind ?? p.religion ?? "").replace(/_/g, " ")} ${p.denomination ?? ""}`
+          + `${p.cuisine ? ` · ${String(p.cuisine).replace(/;/g, ", ").replace(/_/g, " ")}` : ""}`
+          + `${p.name && !p.religion && !p.denomination ? `<br>${gmapsLink(p.name, feats[0].geometry.coordinates)}` : ""}`)
         .addTo(map);
     }
     feats = tryLayers(["traffic"]);
