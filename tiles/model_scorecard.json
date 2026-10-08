@@ -29,7 +29,7 @@
     "within_10pct": 65.3
    }
   },
-  "holdout_median_err_pct": 6.81,
+  "holdout_median_err_pct": 6.83,
   "live_vs_holdout_ratio": 1.1,
   "status": "ok",
   "mode": "backfill \u2014 live log has 29 of 30 pairs so far",
@@ -41,59 +41,59 @@
  },
  "model": {
   "trained_on": 3661,
-  "r2_log": 0.773,
-  "median_abs_err_pct": 6.81,
+  "r2_log": 0.7731,
+  "median_abs_err_pct": 6.83,
   "mean_abs_err_pct": 8.68,
-  "scored_active": 1906,
+  "scored_active": 1899,
   "ppsf_factor": {
-   "<150": 1.681,
-   "150-190": 0.891,
-   "190-240": 0.887,
-   "240+": 1.29
+   "<150": 1.677,
+   "150-190": 0.881,
+   "190-240": 0.88,
+   "240+": 1.279
   },
   "era_floor_pct": {
-   "<1920": 8.11,
-   "1920-49": 8.9,
-   "1950-79": 6.5,
+   "<1920": 8.16,
+   "1920-49": 8.92,
+   "1950-79": 6.54,
    "1980-2009": 6.53,
-   "2010+": 6.03
+   "2010+": 6.14
   },
-  "era_Q_over_df": 11.37,
-  "city_Q_over_df": 1.6,
+  "era_Q_over_df": 10.43,
+  "city_Q_over_df": 1.52,
   "city_factor_range": [
-   0.774,
-   1.162
+   0.812,
+   1.159
   ],
   "segment": "ppsf:120-300,price:250000-600000",
-  "asking_premium_pct": 2.0,
+  "asking_premium_pct": 2.1,
   "ptype": "single",
   "tiers": {
    "core": {
     "train": "ppsf:120-300,price:250000-600000",
     "score": "ppsf:120-300,price:250000-600000",
     "trained_on": 3661,
-    "r2_log": 0.773,
-    "median_abs_err_pct": 6.81,
+    "r2_log": 0.7731,
+    "median_abs_err_pct": 6.83,
     "mean_abs_err_pct": 8.68,
-    "scored_active": 1639,
+    "scored_active": 1635,
     "ppsf_factor": {
-     "<150": 1.681,
-     "150-190": 0.891,
-     "190-240": 0.887,
-     "240+": 1.29
+     "<150": 1.677,
+     "150-190": 0.881,
+     "190-240": 0.88,
+     "240+": 1.279
     },
     "era_floor_pct": {
-     "<1920": 8.11,
-     "1920-49": 8.9,
-     "1950-79": 6.5,
+     "<1920": 8.16,
+     "1920-49": 8.92,
+     "1950-79": 6.54,
      "1980-2009": 6.53,
-     "2010+": 6.03
+     "2010+": 6.14
     },
-    "era_Q_over_df": 11.37,
-    "city_Q_over_df": 1.6,
+    "era_Q_over_df": 10.43,
+    "city_Q_over_df": 1.52,
     "city_factor_range": [
-     0.774,
-     1.162
+     0.812,
+     1.159
     ]
    },
    "upper": {
@@ -103,7 +103,7 @@
     "r2_log": 0.2164,
     "median_abs_err_pct": 6.42,
     "mean_abs_err_pct": 7.56,
-    "scored_active": 267,
+    "scored_active": 264,
     "ppsf_factor": {
      "150-190": 1.0,
      "190-240": 1.0,
@@ -124,5 +124,5 @@
    }
   }
  },
- "written": "2026-10-07 12:28"
+ "written": "2026-10-07 18:43"
 }
