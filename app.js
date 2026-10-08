@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "f49e652337";  // replaced with the publish timestamp by publish.sh
+const BUILD = "e7424f16c8";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -55,7 +55,7 @@ const RAMP = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", 
 // specialty food shops (p30), one colour per kind
 const FOOD = { bakery: ["#c58b3a", "bakery"], patisserie: ["#e87ba4", "patisserie"],
   fishmonger: ["#2a78d6", "fishmonger"], butcher: ["#d03b3b", "butcher"],
-  fromagerie: ["#eda100", "fromagerie"], market: ["#6b4fbb", "market hall"] };
+  fromagerie: ["#eda100", "fromagerie"], market: ["#6b7a2a", "market hall"] };
 
 // school markers: public (district, charter, STEM, career) vs private
 const SCHOOL_PUBLIC = "#0e7c86", SCHOOL_PRIVATE = "#b5651d";
