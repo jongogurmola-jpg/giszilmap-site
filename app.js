@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "afa991971a";  // replaced with the publish timestamp by publish.sh
+const BUILD = "054fe42b36";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -15,7 +15,8 @@ const EMPTY_FC = { type: "FeatureCollection", features: [] };
 // worker the first time the overlay is switched on (see ensureSource)
 const LAZY_SRC = { crimetrend: "crime_trend.geojson", parks: "parks.geojson", amenities: "amenities.geojson",
   grocery: "grocery.geojson", worship: "worship.geojson", stripclubs: "stripclubs.geojson",
-  housing: "housing.geojson", districts: "school_districts.geojson", ppsf: "ppsf_contours.geojson" };
+  housing: "housing.geojson", districts: "school_districts.geojson", ppsf: "ppsf_contours.geojson",
+  food: "specialty_food.geojson" };
 const loadedSrc = new Set();
 /* schools.geojson (p28): fetched once, used by the Schools layer and by every
    house pop-up's "likely public schools" line, which needs it even with the
@@ -51,6 +52,11 @@ try {
 const RAMP = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"];
 // validated all-pairs set; weakest pair (magenta/red, ΔE 13.2) is assigned to
 // the two smallest categories (multi/asian) which rarely mass side by side
+// specialty food shops (p30), one colour per kind
+const FOOD = { bakery: ["#c58b3a", "bakery"], patisserie: ["#e87ba4", "patisserie"],
+  fishmonger: ["#2a78d6", "fishmonger"], butcher: ["#d03b3b", "butcher"],
+  fromagerie: ["#eda100", "fromagerie"], market: ["#6b4fbb", "market hall"] };
+
 // school markers: public (district, charter, STEM, career) vs private
 const SCHOOL_PUBLIC = "#0e7c86", SCHOOL_PRIVATE = "#b5651d";
 
@@ -189,6 +195,7 @@ const OVERLAYS = [
   { id: "crimepts",  label: "Crime incidents",    color: CRIME_COLORS.violent, on: false },
   { id: "amenities", label: "Cafés/bars/dining",  color: "#eb6834", on: false },
   { id: "grocery",   label: "Grocery stores",     color: "#1baf7a", on: false },
+  { id: "food",      label: "Bakeries & specialty food", color: "#c58b3a", on: false },
   { id: "worship",   label: "Places of worship",  color: "#4a3aa7", on: false },
   { id: "stripclubs", label: "Strip clubs",         color: "#0b0b0b", on: false },
   { id: "housing",    label: "Public & subsidized housing", color: "#b5178a", on: false },
@@ -494,6 +501,23 @@ map.on("load", async () => {
         "#4a3aa7"],  // bar/pub
       "circle-stroke-color": "#fcfcfb", "circle-stroke-width": 0.8,
     },
+  });
+
+  map.addSource("food", { type: "geojson", data: EMPTY_FC });
+  map.addLayer({
+    id: "food", type: "circle", source: "food", minzoom: 9,
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, ["case", ["==", ["get", "kind"], "market"], 4, 2.5],
+                        14, ["case", ["==", ["get", "kind"], "market"], 9, 6]],
+      "circle-color": ["match", ["get", "kind"], ...Object.entries(FOOD).flatMap(([k, [c]]) => [k, c]), "#898781"],
+      "circle-stroke-color": "#fcfcfb", "circle-stroke-width": 1.2,
+    },
+  });
+  map.addLayer({
+    id: "food-label", type: "symbol", source: "food", minzoom: 13.5,
+    layout: { "text-field": ["get", "name"], "text-size": 10.5, "text-font": ["Noto Sans Regular"],
+              "text-offset": [0, 0.9], "text-anchor": "top", "text-optional": true, "text-max-width": 9 },
+    paint: { "text-color": "#52514e", "text-halo-color": "#fcfcfb", "text-halo-width": 1.2 },
   });
 
   map.addSource("grocery", { type: "geojson", data: EMPTY_FC });
@@ -827,6 +851,11 @@ function buildPanel() {
   $("trendperiod").value = store.get("trendperiod", "2000");
   $("trendperiod").onchange = () => { store.set("trendperiod", $("trendperiod").value); applyTrendPeriod(); legendDots(); };
   applyTrendPeriod();
+  for (const id of ["foodkind", "foodchain"]) {
+    $(id).value = store.get(id, id === "foodchain" ? "indie" : "");
+    $(id).onchange = () => { store.set(id, $(id).value); applyFoodFilter(); };
+  }
+  applyFoodFilter();
   for (const id of ["schoollevel", "schoolsector", "schoolfaith"]) {
     $(id).value = store.get(id, "");
     $(id).onchange = () => { store.set(id, $(id).value); applySchoolFilter(); };
@@ -890,6 +919,14 @@ function applyTrendPeriod() {
     "multi", DOT_COLORS.multi, "other", DOT_COLORS.other, "rgba(0,0,0,0)"]);
   map.setPaintProperty("trend", "fill-opacity", ["interpolate", ["linear"],
     ["coalesce", ["get", k + "_pp"], 0], 0, 0.05, 5, 0.25, 15, 0.55, 35, 0.85]);
+}
+
+function applyFoodFilter() {
+  if (!map.getLayer("food")) return;
+  const f = ["all"];
+  if ($("foodkind").value) f.push(["==", ["get", "kind"], $("foodkind").value]);
+  if ($("foodchain").value === "indie") f.push(["!=", ["get", "chain"], 1]);
+  for (const id of ["food", "food-label"]) map.setFilter(id, f.length > 1 ? f : null);
 }
 
 function applySchoolFilter() {
@@ -1720,6 +1757,11 @@ function legendDots() {
     parts.push(`<span><i class="sq" style="background:${valueOn ? VALUE_NEUTRAL : LISTING_COLOR}"></i>square = asking price has changed</span>`);
   if (OVERLAYS.find(o => o.id === "sold").on)
     parts.push(`<span><i style="background:${SOLD_COLOR}"></i>sold</span>`);
+  if (OVERLAYS.find(o => o.id === "food").on) {
+    for (const [, [c, lab]] of Object.entries(FOOD))
+      parts.push(`<span><i style="background:${c}"></i>${lab}</span>`);
+    parts.push(`<em class="legend-note">OpenStreetMap shops · chains hidden unless "include chains" · market halls (West Side Market, Van Aken) hold butchers, fishmongers and cheese stalls OSM doesn't map one by one</em>`);
+  }
   if (OVERLAYS.find(o => o.id === "schools").on)
     parts.push(`<span><i style="background:${SCHOOL_PUBLIC}"></i>public school</span>`,
                `<span><i style="background:${SCHOOL_PRIVATE}"></i>private school</span>`,
@@ -1803,6 +1845,15 @@ function wirePopups() {
     feats = tryLayers(["housing"]);
     if (feats.length && map.getLayoutProperty("housing", "visibility") === "visible")
       return popupHousing(e.lngLat, feats[0].properties);
+    feats = tryLayers(["food"]);
+    if (feats.length && map.getLayoutProperty("food", "visibility") === "visible") {
+      const p = feats[0].properties;
+      const web = p.website ? `<br><a href="${/^https?:/.test(p.website) ? p.website : "https://" + p.website}" target="_blank" rel="noopener noreferrer">website ↗</a>` : "";
+      return new maplibregl.Popup({ maxWidth: "300px" }).setLngLat(e.lngLat).setHTML(
+        `<b>${p.name}</b><br><span style="color:${FOOD[p.kind]?.[0]}">${FOOD[p.kind]?.[1] ?? p.kind}</span>${+p.chain === 1 ? " · chain" : ""}`
+        + `${p.address ? `<br><span class="dim">${p.address}</span>` : ""}`
+        + `${p.hours ? `<br><span class="dim">${p.hours}</span>` : ""}${web}`).addTo(map);
+    }
     feats = tryLayers(["stripclubs", "grocery", "amenities", "worship"]);
     if (feats.length) {
       const p = feats[0].properties;
@@ -1841,7 +1892,7 @@ function wirePopups() {
       return popupScorecard(e.lngLat, props);
     }
   });
-  for (const id of ["watch", "listings", "listings-sq", "schools", "sold", "grocery", "amenities", "worship", "housing", "traffic", "speed", "bg-fill"])
+  for (const id of ["watch", "listings", "listings-sq", "schools", "food", "sold", "grocery", "amenities", "worship", "housing", "traffic", "speed", "bg-fill"])
     map.on("mouseenter", id, () => map.getCanvas().style.cursor = "pointer");
 }
 
