@@ -44,7 +44,7 @@
   "r2_log": 0.7685,
   "median_abs_err_pct": 6.84,
   "mean_abs_err_pct": 8.77,
-  "scored_active": 1921,
+  "scored_active": 1939,
   "ppsf_factor": {
    "<150": 1.627,
    "150-190": 0.885,
@@ -75,7 +75,7 @@
     "r2_log": 0.7685,
     "median_abs_err_pct": 6.84,
     "mean_abs_err_pct": 8.77,
-    "scored_active": 1651,
+    "scored_active": 1668,
     "ppsf_factor": {
      "<150": 1.627,
      "150-190": 0.885,
@@ -103,7 +103,7 @@
     "r2_log": 0.1974,
     "median_abs_err_pct": 6.17,
     "mean_abs_err_pct": 7.61,
-    "scored_active": 270,
+    "scored_active": 271,
     "ppsf_factor": {
      "150-190": 1.0,
      "190-240": 1.0,
@@ -123,5 +123,5 @@
    }
   }
  },
- "written": "2026-10-08 06:29"
+ "written": "2026-10-08 12:25"
 }
