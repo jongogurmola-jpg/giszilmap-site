@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "e7424f16c8";  // replaced with the publish timestamp by publish.sh
+const BUILD = "b032583220";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -929,6 +929,16 @@ function gmapsLink(name, coords) {
   const [x, y] = coords;
   return `<a href="https://www.google.com/maps/search/${encodeURIComponent(name)}/@${y.toFixed(6)},${x.toFixed(6)},17z" `
     + `target="_blank" rel="noopener noreferrer">Google Maps & reviews ↗</a>`;
+}
+
+/* Foursquare rating (p31), 0-10, linking to the place's Foursquare page */
+function fsqLine(p) {
+  if (!p.fsq_id) return "";
+  const url = `https://foursquare.com/v/${p.fsq_id}`;
+  return p.fsq_rating != null
+    ? `<br><a href="${url}" target="_blank" rel="noopener noreferrer">★ ${(+p.fsq_rating).toFixed(1)}/10`
+      + `${p.fsq_votes ? ` (${(+p.fsq_votes).toLocaleString()} ratings)` : ""} on Foursquare ↗</a>`
+    : `<br><a href="${url}" target="_blank" rel="noopener noreferrer">Foursquare ↗</a> <span class="dim">no rating yet</span>`;
 }
 
 function applyFoodFilter() {
@@ -1863,7 +1873,7 @@ function wirePopups() {
       return new maplibregl.Popup({ maxWidth: "300px" }).setLngLat(e.lngLat).setHTML(
         `<b>${p.name}</b><br><span style="color:${FOOD[p.kind]?.[0]}">${FOOD[p.kind]?.[1] ?? p.kind}</span>${+p.chain === 1 ? " · chain" : ""}`
         + `${p.address ? `<br><span class="dim">${p.address}</span>` : ""}`
-        + `${p.hours ? `<br><span class="dim">${p.hours}</span>` : ""}${web}`).addTo(map);
+        + `${p.hours ? `<br><span class="dim">${p.hours}</span>` : ""}${fsqLine(p)}${web}`).addTo(map);
     }
     feats = tryLayers(["stripclubs", "grocery", "amenities", "worship"]);
     if (feats.length) {
@@ -1871,6 +1881,7 @@ function wirePopups() {
       return new maplibregl.Popup().setLngLat(e.lngLat)
         .setHTML(`<b>${p.name ?? p.chain ?? "(unnamed)"}</b><br>${p.chain ?? String(p.kind ?? p.religion ?? "").replace(/_/g, " ")} ${p.denomination ?? ""}`
           + `${p.cuisine ? ` · ${String(p.cuisine).replace(/;/g, ", ").replace(/_/g, " ")}` : ""}`
+          + fsqLine(p)
           + `${p.name && !p.religion && !p.denomination ? `<br>${gmapsLink(p.name, feats[0].geometry.coordinates)}` : ""}`)
         .addTo(map);
     }
