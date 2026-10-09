@@ -1,81 +1,81 @@
 {
-  "asof": "2026-10-08 12:27:00",
+  "asof": "2026-10-08 18:45:00",
   "horizon_days": 7,
-  "scored_active": 6599,
+  "scored_active": 6632,
   "sale_to_list": {
-    "n_train": 4897,
+    "n_train": 4895,
     "n_test": 2193,
-    "mae_model_pp": 3.9,
-    "mae_dom_only_pp": 4.05,
+    "mae_model_pp": 3.89,
+    "mae_dom_only_pp": 4.06,
     "mae_predict_median_pp": 4.25,
-    "auc_sells_above_asking": 0.812,
+    "auc_sells_above_asking": 0.815,
     "auc_dom_only": 0.776,
-    "auc_day_one_no_timing": 0.651,
-    "band_coverage_raw": 0.528,
-    "band_widened_by_pp": 0.46,
+    "auc_day_one_no_timing": 0.658,
+    "band_coverage_raw": 0.522,
+    "band_widened_by_pp": 0.54,
     "band_coverage_widened": 0.6
   },
   "p_cut": {
-    "listing_days": 217582,
-    "listings": 10947,
-    "base_rate": 0.1203,
-    "auc": 0.68,
+    "listing_days": 217555,
+    "listings": 10946,
+    "base_rate": 0.1204,
+    "auc": 0.683,
     "auc_dom_only": 0.612,
     "brier": 0.1013,
-    "brier_base_rate": 0.1058,
-    "rate_in_top_decile": 0.253,
+    "brier_base_rate": 0.1059,
+    "rate_in_top_decile": 0.25,
     "calibration": [
       [
-        0.031,
-        0.039
+        0.03,
+        0.037
       ],
       [
         0.069,
-        0.071
+        0.073
       ],
       [
-        0.107,
-        0.111
+        0.106,
+        0.106
       ],
       [
         0.154,
-        0.159
+        0.16
       ],
       [
         0.241,
-        0.222
+        0.226
       ]
     ]
   },
   "p_contract": {
-    "listing_days": 217582,
-    "listings": 10947,
-    "base_rate": 0.1024,
+    "listing_days": 217555,
+    "listings": 10946,
+    "base_rate": 0.1025,
     "auc": 0.744,
     "auc_dom_only": 0.691,
     "brier": 0.084,
-    "brier_base_rate": 0.0919,
-    "rate_in_top_decile": 0.319,
+    "brier_base_rate": 0.092,
+    "rate_in_top_decile": 0.321,
     "calibration": [
       [
         0.017,
         0.02
       ],
       [
-        0.045,
-        0.048
+        0.046,
+        0.05
       ],
       [
         0.079,
-        0.077
+        0.076
       ],
       [
         0.13,
-        0.121
+        0.119
       ],
       [
-        0.272,
-        0.246
+        0.274,
+        0.248
       ]
     ]
   }
