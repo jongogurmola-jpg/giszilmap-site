@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "b032583220";  // replaced with the publish timestamp by publish.sh
+const BUILD = "4461e2dfc6";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -1173,8 +1173,15 @@ function buildListingFilters() {
   const pt = $("ptype").value;
   if (pt && PTYPE_CATS[pt])
     f.push(["in", ["coalesce", ["get", "ptype"], ""], ["literal", PTYPE_CATS[pt]]]);
-  const age = $("age").value;  // n = newer than, o = older than
-  if (age) {
+  const age = $("age").value;  // n = newer than, o = older than, s0 = since the last refresh
+  if (age === "s0") {
+    // p09's flags against the previous pull: new / price changed / went under contract
+    const flag = k => ["==", ["coalesce", ["get", k], 0], 1];
+    const mode = $("agemode").value;
+    f.push(mode === "listing" ? flag("new_since_last")
+      : mode === "change" ? flag("chg_since_last")
+      : ["any", flag("new_since_last"), flag("chg_since_last"), flag("uc_since_last")]);
+  } else if (age) {
     const days = +age.slice(1);
     // "price change" mode filters on days since the last price change this
     // tool observed; listings with no observed change are excluded. "either"
@@ -1194,7 +1201,8 @@ function buildListingFilters() {
   }
   // sold: same price/beds/baths constraints, plus the sold-within horizon
   const g = f.filter(x => { const j = JSON.stringify(x);
-    return !(j.includes('"status"') || j.includes('"days_on_market"') || j.includes('"days_since_change"')); });
+    return !(j.includes('"status"') || j.includes('"days_on_market"') || j.includes('"days_since_change"')
+             || j.includes('_since_last"')); });
   g.push(["<=", ["coalesce", ["get", "days_since_sold"], 999], +$("soldwin").value]);
   return { listing: f, sold: g };
 }
@@ -2177,7 +2185,10 @@ function popupListing(lngLat, p) {
     built ${p.year_built ?? "—"} · ${p.status === "sold" ? fmt(p.days_since_sold) + " days ago" : fmt(p.days_on_market) + " days on market"}
     ${p.status === "sold" && p.list_price ? `<br>asked ${money(p.list_price)}${p.orig_price && p.orig_price !== p.list_price ? ` (first ${money(p.orig_price)})` : ""} · <b style="color:${p.sale_to_list > 0 ? "#d03b3b" : p.sale_to_list < 0 ? "#006300" : "#52514e"}">${p.sale_to_list > 0 ? "+" : ""}${fmt(p.sale_to_list, 1)}%</b>${p.dom != null ? ` · ${fmt(p.dom)} days to contract` : ""}` : ""}
     ${p.status !== "sold" && p.days_to_pending != null ? `<br>under contract after ${fmt(p.days_to_pending)} days` : ""}
-    ${p.price_changed ? `<br><b style="color:${p.price_change_pct < 0 ? "#006300" : "#d03b3b"}">${p.price_change_pct < 0 ? "▼" : "▲"} ${Math.abs(p.price_change_pct)}%</b> on ${p.price_changed}` : ""}<br>
+    ${p.price_changed ? `<br><b style="color:${p.price_change_pct < 0 ? "#006300" : "#d03b3b"}">${p.price_change_pct < 0 ? "▼" : "▲"} ${Math.abs(p.price_change_pct)}%</b> on ${p.price_changed}` : ""}
+    ${+p.new_since_last === 1 ? `<br><b style="color:#4a3aa7">new since the last refresh</b>` : ""}
+    ${+p.chg_since_last === 1 && p.prev_price ? `<br><b>price changed since the last refresh</b> (was ${money(p.prev_price)})` : ""}
+    ${+p.uc_since_last === 1 ? `<br><b style="color:${PENDING_COLOR}">went under contract since the last refresh</b>` : ""}<br>
     <a href="${p.url}" target="_blank" rel="noopener noreferrer">listing ↗ (${p.source})</a>
     &nbsp;·&nbsp; <button class="share-btn" onclick="shareListing('${shareId}')">Share ⇪</button>
     ${valueLine(p)}
