@@ -1020,7 +1020,7 @@
 {"type":"Feature","properties":{"name":"Flyers Bar & Grill","kind":"bar","cuisine":null},"geometry":{"type":"Point","coordinates":[-81.7637006,41.3898462]}},
 {"type":"Feature","properties":{"name":"Pizza Hut","kind":"restaurant","cuisine":"pizza"},"geometry":{"type":"Point","coordinates":[-81.7603328,41.4654738]}},
 {"type":"Feature","properties":{"name":"Golden Gate","kind":"restaurant","cuisine":"asian"},"geometry":{"type":"Point","coordinates":[-81.8091427,41.4765982]}},
-{"type":"Feature","properties":{"name":"Old Brooklyn Nuitrition","kind":"cafe","cuisine":"juice"},"geometry":{"type":"Point","coordinates":[-81.7044953,41.4426947]}},
+{"type":"Feature","properties":{"name":"Old Brooklyn Nutrition","kind":"cafe","cuisine":"juice"},"geometry":{"type":"Point","coordinates":[-81.7044953,41.4426947]}},
 {"type":"Feature","properties":{"name":"Little Kings' Lounge","kind":"bar","cuisine":null},"geometry":{"type":"Point","coordinates":[-81.6683951,41.5081512]}},
 {"type":"Feature","properties":{"name":"Ghost Light","kind":"restaurant","cuisine":null},"geometry":{"type":"Point","coordinates":[-81.683382,41.5005104]}},
 {"type":"Feature","properties":{"name":null,"kind":"bar","cuisine":null},"geometry":{"type":"Point","coordinates":[-81.6860809,41.4998532]}},
