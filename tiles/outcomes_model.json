@@ -1,45 +1,45 @@
 {
-  "asof": "2026-10-13 00:42:00",
+  "asof": "2026-10-13 06:35:00",
   "horizon_days": 7,
-  "scored_active": 6651,
+  "scored_active": 6667,
   "sale_to_list": {
-    "n_train": 4911,
-    "n_test": 2085,
+    "n_train": 4899,
+    "n_test": 2119,
     "mae_model_pp": 3.86,
-    "mae_dom_only_pp": 4.03,
+    "mae_dom_only_pp": 4.04,
     "mae_predict_median_pp": 4.22,
-    "auc_sells_above_asking": 0.803,
-    "auc_dom_only": 0.773,
-    "auc_day_one_no_timing": 0.664,
-    "band_coverage_raw": 0.511,
+    "auc_sells_above_asking": 0.808,
+    "auc_dom_only": 0.769,
+    "auc_day_one_no_timing": 0.663,
+    "band_coverage_raw": 0.512,
     "band_widened_by_pp": 0.55,
     "band_coverage_widened": 0.6
   },
   "p_cut": {
     "listing_days": 250343,
     "listings": 11482,
-    "base_rate": 0.1198,
+    "base_rate": 0.1199,
     "auc": 0.68,
-    "auc_dom_only": 0.612,
+    "auc_dom_only": 0.613,
     "brier": 0.1009,
     "brier_base_rate": 0.1055,
-    "rate_in_top_decile": 0.25,
+    "rate_in_top_decile": 0.255,
     "calibration": [
       [
-        0.032,
-        0.038
+        0.031,
+        0.04
       ],
       [
         0.07,
-        0.073
+        0.071
       ],
       [
         0.106,
-        0.109
+        0.11
       ],
       [
         0.152,
-        0.158
+        0.157
       ],
       [
         0.238,
@@ -51,31 +51,31 @@
     "listing_days": 250343,
     "listings": 11482,
     "base_rate": 0.1013,
-    "auc": 0.744,
+    "auc": 0.745,
     "auc_dom_only": 0.687,
-    "brier": 0.0832,
+    "brier": 0.083,
     "brier_base_rate": 0.091,
-    "rate_in_top_decile": 0.323,
+    "rate_in_top_decile": 0.321,
     "calibration": [
       [
         0.017,
-        0.02
+        0.019
       ],
       [
-        0.046,
-        0.048
+        0.045,
+        0.047
       ],
       [
-        0.079,
-        0.079
+        0.078,
+        0.078
       ],
       [
         0.128,
-        0.116
+        0.117
       ],
       [
         0.271,
-        0.244
+        0.245
       ]
     ]
   }
