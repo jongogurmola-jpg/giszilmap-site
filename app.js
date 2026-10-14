@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "4461e2dfc6";  // replaced with the publish timestamp by publish.sh
+const BUILD = "00d80b308c";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -2190,6 +2190,7 @@ function popupListing(lngLat, p) {
     ${+p.chg_since_last === 1 && p.prev_price ? `<br><b>price changed since the last refresh</b> (was ${money(p.prev_price)})` : ""}
     ${+p.uc_since_last === 1 ? `<br><b style="color:${PENDING_COLOR}">went under contract since the last refresh</b>` : ""}<br>
     <a href="${p.url}" target="_blank" rel="noopener noreferrer">listing ↗ (${p.source})</a>
+    ${p.sb_url ? ` · <a href="${p.sb_url}" target="_blank" rel="noopener noreferrer" title="Shaker Heights Historical Society building survey">shakerbuildings ↗</a>` : ""}
     &nbsp;·&nbsp; <button class="share-btn" onclick="shareListing('${shareId}')">Share ⇪</button>
     ${valueLine(p)}
     ${hood}
