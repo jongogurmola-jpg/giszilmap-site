@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "00d80b308c";  // replaced with the publish timestamp by publish.sh
+const BUILD = "cec2161c4a";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -16,14 +16,60 @@ const EMPTY_FC = { type: "FeatureCollection", features: [] };
 const LAZY_SRC = { crimetrend: "crime_trend.geojson", parks: "parks.geojson", amenities: "amenities.geojson",
   grocery: "grocery.geojson", worship: "worship.geojson", stripclubs: "stripclubs.geojson",
   housing: "housing.geojson", districts: "school_districts.geojson", ppsf: "ppsf_contours.geojson",
-  food: "specialty_food.geojson" };
+  food: "specialty_food.geojson", marinas: "marinas.geojson" };
 const loadedSrc = new Set();
 /* schools.geojson (p28): fetched once, used by the Schools layer and by every
    house pop-up's "likely public schools" line, which needs it even with the
    layer off */
 let schoolsFC = null, schoolsLoad = null;
+const SCHOOL_ECOSYSTEMS = [
+  ["hawken", "Hawken School", /hawken|birchwood school of hawken/],
+  ["laurel", "Laurel School", /laurel school/],
+  ["ea", "EA Schools", /^ea\s+academy/],
+  ["university", "University School", /^the university school/],
+  ["hershey", "Hershey Montessori", /hershey montessori/],
+  ["lawrence", "Lawrence School", /^lawrence school/],
+  ["lerner", "Cleveland Clinic Lerner", /cleveland clinic lerner school/],
+  ["chapel-hill", "Chapel Hill Christian", /chapel hill christian/],
+  ["medina-christian", "Medina Christian Academy", /medina christian academy/],
+  ["heritage", "Heritage Classical Academy", /heritage classical academy/],
+  ["julie-billiart", "Julie Billiart School", /julie billiart/],
+  ["al-ihsan", "Al Ihsan Schools", /al ihsan/],
+  ["yeshiva-derech-hatorah", "Yeshiva Derech Hatorah", /yeshiva derech hatorah/],
+  ["spectrum", "Spectrum School", /spectrum (?:inspires|growth)/],
+  ["elms", "Our Lady of the Elms", /our lady of the elms/],
+  ["st-benedict", "St. Benedict", /st benedict/],
+];
+function identifySchoolEcosystem(p) {
+  if (p.sector !== "private") return null;
+  const name = (p.name || "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+  const host = (p.website || "").toLowerCase().replace(/^https?:\/\//, "").split(/[/:]/)[0].replace(/^www\./, "");
+  const byHost = {
+    "hawken.edu": "hawken", "birchwoodschool.org": "hawken",
+    "laurelschool.org": "laurel", "easchools.org": "ea", "us.edu": "university",
+    "hershey-montessori.org": "hershey", "lawrenceschool.org": "lawrence",
+    "my.clevelandclinic.org": "lerner", "chapelhillchristianschool.org": "chapel-hill",
+    "medinachristian.org": "medina-christian", "heritageclassicalacademy.org": "heritage",
+    "juliebilliartschool.org": "julie-billiart", "alihsanschools.org": "al-ihsan",
+    "ydtcleveland.org": "yeshiva-derech-hatorah", "spectrum-school.com": "spectrum",
+    "theelms.org": "elms", "stbenedictohio.org": "st-benedict",
+  };
+  const id = byHost[host] || SCHOOL_ECOSYSTEMS.find(([, , pattern]) => pattern.test(name))?.[0];
+  return SCHOOL_ECOSYSTEMS.find(([key]) => key === id) || null;
+}
 function ensureSchools() {
-  schoolsLoad ??= fetch(tile("schools.geojson")).then(r => r.json()).then(fc => (schoolsFC = fc))
+  schoolsLoad ??= fetch(tile("schools.geojson")).then(r => r.json()).then(fc => {
+    // Add a campus-system key in memory; the source feed lists campuses
+    // individually and does not publish a shared parent-organization field.
+    for (const feature of fc.features || []) {
+      const system = identifySchoolEcosystem(feature.properties || {});
+      if (system) {
+        feature.properties.ecosystem = system[0];
+        feature.properties.ecosystem_name = system[1];
+      }
+    }
+    return (schoolsFC = fc);
+  })
     .catch(() => { schoolsLoad = null; return EMPTY_FC; });
   return schoolsLoad;
 }
@@ -196,6 +242,7 @@ const OVERLAYS = [
   { id: "amenities", label: "Cafés/bars/dining",  color: "#eb6834", on: false },
   { id: "grocery",   label: "Grocery stores",     color: "#1baf7a", on: false },
   { id: "food",      label: "Bakeries & specialty food", color: "#c58b3a", on: false },
+  { id: "marinas",   label: "Marinas & boat slips", color: "#167c9a", on: false },
   { id: "worship",   label: "Places of worship",  color: "#4a3aa7", on: false },
   { id: "stripclubs", label: "Strip clubs",         color: "#0b0b0b", on: false },
   { id: "housing",    label: "Public & subsidized housing", color: "#b5178a", on: false },
@@ -511,6 +558,15 @@ map.on("load", async () => {
                         14, ["case", ["==", ["get", "kind"], "market"], 9, 6]],
       "circle-color": ["match", ["get", "kind"], ...Object.entries(FOOD).flatMap(([k, [c]]) => [k, c]), "#898781"],
       "circle-stroke-color": "#fcfcfb", "circle-stroke-width": 1.2,
+    },
+  });
+
+  map.addSource("marinas", { type: "geojson", data: EMPTY_FC });
+  map.addLayer({
+    id: "marinas", type: "circle", source: "marinas", minzoom: 8,
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 3, 13, 6, 16, 9],
+      "circle-color": "#167c9a", "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.5,
     },
   });
   map.addLayer({
@@ -856,10 +912,33 @@ function buildPanel() {
     $(id).onchange = () => { store.set(id, $(id).value); applyFoodFilter(); };
   }
   applyFoodFilter();
-  for (const id of ["schoollevel", "schoolsector", "schoolfaith"]) {
+  for (const id of ["schoollevel", "schoolsector", "schoolfaith", "schoolecosystem"]) {
     $(id).value = store.get(id, "");
-    $(id).onchange = () => { store.set(id, $(id).value); applySchoolFilter(); };
   }
+  if ($("schoolecosystem").value) {
+    $("schoolsector").value = "private";
+    store.set("schoolsector", "private");
+  }
+  $("schoollevel").onchange = () => { store.set("schoollevel", $("schoollevel").value); applySchoolFilter(); };
+  $("schoolfaith").onchange = () => { store.set("schoolfaith", $("schoolfaith").value); applySchoolFilter(); };
+  $("marinasize").value = store.get("marinasize", "25");
+  $("marinasize").onchange = () => store.set("marinasize", $("marinasize").value);
+  $("schoolsector").onchange = () => {
+    if ($("schoolsector").value !== "private" && $("schoolecosystem").value) {
+      $("schoolecosystem").value = "";
+      store.set("schoolecosystem", "");
+    }
+    store.set("schoolsector", $("schoolsector").value);
+    applySchoolFilter();
+  };
+  $("schoolecosystem").onchange = () => {
+    if ($("schoolecosystem").value) {
+      $("schoolsector").value = "private";
+      store.set("schoolsector", "private");
+    }
+    store.set("schoolecosystem", $("schoolecosystem").value);
+    applySchoolFilter();
+  };
   applySchoolFilter();
   const TDEF = { tmode: "vol", ttime: "day", tday: "wd", thour: "17" };
   for (const id of Object.keys(TDEF)) {
@@ -959,6 +1038,11 @@ function applySchoolFilter() {
   const fa = $("schoolfaith").value;
   if (fa === "faith") f.push(["in", ["get", "faith"], ["literal", ["catholic", "religious"]]]);
   else if (fa) f.push(["==", ["get", "faith"], fa]);
+  const ecosystem = $("schoolecosystem").value;
+  if (ecosystem) {
+    f.push(["==", ["get", "sector"], "private"]);
+    f.push(["==", ["get", "ecosystem"], ecosystem]);
+  }
   for (const id of ["schools", "schools-label"]) map.setFilter(id, f.length > 1 ? f : null);
 }
 
@@ -1883,6 +1967,9 @@ function wirePopups() {
         + `${p.address ? `<br><span class="dim">${p.address}</span>` : ""}`
         + `${p.hours ? `<br><span class="dim">${p.hours}</span>` : ""}${fsqLine(p)}${web}`).addTo(map);
     }
+    feats = tryLayers(["marinas"]);
+    if (feats.length && map.getLayoutProperty("marinas", "visibility") === "visible")
+      return popupMarina(e.lngLat, feats[0].properties, feats[0].geometry.coordinates);
     feats = tryLayers(["stripclubs", "grocery", "amenities", "worship"]);
     if (feats.length) {
       const p = feats[0].properties;
@@ -1924,8 +2011,32 @@ function wirePopups() {
       return popupScorecard(e.lngLat, props);
     }
   });
-  for (const id of ["watch", "listings", "listings-sq", "schools", "food", "sold", "grocery", "amenities", "worship", "housing", "traffic", "speed", "bg-fill"])
+  for (const id of ["watch", "listings", "listings-sq", "schools", "food", "marinas", "sold", "grocery", "amenities", "worship", "housing", "traffic", "speed", "bg-fill"])
     map.on("mouseenter", id, () => map.getCanvas().style.cursor = "pointer");
+}
+
+function popupMarina(lngLat, p, coords) {
+  const size = $("marinasize").value === "35" ? 35 : 25;
+  const seasonal = size === 25 ? p.seasonal_25 : p.seasonal_35;
+  const slipSize = size === 25 ? p.slip_size_25 : p.slip_size_35;
+  const rate = seasonal != null
+    ? `<b>${money(seasonal)}</b> seasonal (${slipSize}' slip)`
+    : `<span class="dim">Seasonal rate for a ${size}' boat not published</span>`;
+  const transient = p.transient_per_ft_night != null
+    ? `<br>${money(p.transient_per_ft_night * size)}/night transient (${money(p.transient_per_ft_night)}/ft)` : "";
+  const source = p.rate_source_url
+    ? `<br><a href="${p.rate_source_url}" target="_blank" rel="noopener noreferrer">Rates / details ↗</a>` : "";
+  const membership = p.membership_note
+    ? `<br><b>Club / membership</b><br><span class="dim">${p.membership_note}</span>` : "";
+  const memberSource = p.membership_source_url
+    ? `<br><a href="${p.membership_source_url}" target="_blank" rel="noopener noreferrer">Membership info ↗</a>` : "";
+  const website = p.website
+    ? `<br><a href="${/^https?:/.test(p.website) ? p.website : "https://" + p.website}" target="_blank" rel="noopener noreferrer">Marina website ↗</a>` : "";
+  return new maplibregl.Popup({ maxWidth: "320px" }).setLngLat(lngLat).setHTML(
+    `<b>${p.name ?? "Marina"}</b><br>${rate}${transient}`
+    + `${p.rate_note ? `<br><span class="dim">${p.rate_note}</span>` : ""}`
+    + `${p.max_length_ft ? `<br><span class="dim">Published max boat length: ${p.max_length_ft}'</span>` : ""}`
+    + `${membership}${source}${memberSource}${website}<br>${gmapsLink(p.name, coords)}`).addTo(map);
 }
 
 function popupHousing(lngLat, p) {
@@ -2104,6 +2215,7 @@ function popupSchool(lngLat, p) {
   new maplibregl.Popup({ maxWidth: "360px" }).setLngLat(lngLat).setHTML(`
     <h3><span class="sch-dot" style="background:${p.sector === "private" ? SCHOOL_PRIVATE : SCHOOL_PUBLIC}"></span>${p.name}</h3>
     ${SCHOOL_KIND[p.kind] ?? ""}${p.district && p.sector === "public" ? ` · ${p.district}` : ""}<br>
+    ${p.ecosystem_name ? `<b>School system:</b> ${p.ecosystem_name}<br>` : ""}
     grades ${p.grades ?? "not reported"}${p.grades_guessed ? " (from its name)" : ""}${p.enrollment != null ? ` · ${(+p.enrollment).toLocaleString()} students` : ""}<br>
     <span class="dim">${p.address ?? ""}</span><br>
     ${schoolLinks(p)}

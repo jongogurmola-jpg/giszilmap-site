@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
-<script>window.__EXPECTED_BUILD="00d80b308c";window.__TILE_V={"amenities.geojson":"160bc958c0","blockgroups.geojson":"24add8f2a2","counties.geojson":"cab1f49037","crime_places.geojson":"2385d2af15","crime_trend.geojson":"09ed121c4f","grocery.geojson":"452b378d7e","housing.geojson":"363fa74d2c","listings.geojson":"7bbe44849c","parks.geojson":"a03156a2be","ppsf_contours.geojson":"6ce0ba5cd0","school_districts.geojson":"fbe70e4c7d","schools.geojson":"57cdc36fec","sold.geojson":"f1b42f5268","specialty_food.geojson":"010435de00","stripclubs.geojson":"9540e4c78f","valuation.geojson":"f1cea536a7","watch.geojson":"8d64d320f4","worship.geojson":"02c5a7b5f3","bg_order.json":"11d3d39ad6","meta.json":"7e0327fe66","model_scorecard.json":"df5336f4e6","outcomes_model.json":"8c4cd2426f","tax_profiles.json":"aa8fb7df7c","traffic_profiles.json":"750a253a75"};</script>
+<script>window.__EXPECTED_BUILD="cec2161c4a";window.__TILE_V={"amenities.geojson":"160bc958c0","blockgroups.geojson":"24add8f2a2","counties.geojson":"cab1f49037","crime_places.geojson":"2385d2af15","crime_trend.geojson":"09ed121c4f","grocery.geojson":"452b378d7e","housing.geojson":"363fa74d2c","listings.geojson":"e213115b51","marinas.geojson":"974798f6d5","parks.geojson":"a03156a2be","ppsf_contours.geojson":"6ce0ba5cd0","school_districts.geojson":"fbe70e4c7d","schools.geojson":"57cdc36fec","sold.geojson":"1a28eeceff","specialty_food.geojson":"010435de00","stripclubs.geojson":"9540e4c78f","valuation.geojson":"f1cea536a7","watch.geojson":"da936b8f95","worship.geojson":"02c5a7b5f3","bg_order.json":"11d3d39ad6","meta.json":"1d9d6810e3","model_scorecard.json":"df5336f4e6","outcomes_model.json":"8c4cd2426f","tax_profiles.json":"aa8fb7df7c","traffic_profiles.json":"750a253a75"};</script>
 <title>GISzilMap — Cleveland</title>
 <link rel="stylesheet" href="lib/maplibre-gl.css">
 <link rel="stylesheet" href="style.css?v=8f431a8ccc">
@@ -96,6 +96,9 @@
         <option value="market">market halls</option></select>
       <select id="foodchain"><option value="indie">independents only</option><option value="">include chains</option></select>
     </label>
+    <label class="note">marina slip estimate
+      <select id="marinasize"><option value="25">25-foot boat</option><option value="35">35-foot boat</option></select>
+    </label>
     <label class="note">schools
       <select id="schoollevel"><option value="">all levels</option><option value="elem">elementary</option>
         <option value="mid">middle</option><option value="high">high</option></select>
@@ -104,6 +107,17 @@
       <select id="schoolfaith"><option value="">secular + religious</option><option value="secular">secular</option>
         <option value="faith">religious (any)</option><option value="catholic">Catholic</option>
         <option value="religious">religious, not Catholic</option></select>
+      <select id="schoolecosystem" title="Show every campus in a private school system">
+        <option value="">all private systems</option><option value="hawken">Hawken School</option>
+        <option value="laurel">Laurel School</option><option value="ea">EA Schools</option>
+        <option value="university">University School</option><option value="hershey">Hershey Montessori</option>
+        <option value="lawrence">Lawrence School</option><option value="lerner">Cleveland Clinic Lerner</option>
+        <option value="chapel-hill">Chapel Hill Christian</option><option value="medina-christian">Medina Christian Academy</option>
+        <option value="heritage">Heritage Classical Academy</option><option value="julie-billiart">Julie Billiart School</option>
+        <option value="al-ihsan">Al Ihsan Schools</option><option value="yeshiva-derech-hatorah">Yeshiva Derech Hatorah</option>
+        <option value="spectrum">Spectrum School</option><option value="elms">Our Lady of the Elms</option>
+        <option value="st-benedict">St. Benedict</option>
+      </select>
     </label>
     <div id="traffic-widget" class="twidget" hidden>
       <label>show <select id="tmode">
@@ -188,6 +202,6 @@
 <script src="lib/maplibre-gl.js"></script>
 <script src="lib/pmtiles.js"></script>
 <script src="lib/basemaps.js"></script>
-<script src="app.js?v=00d80b308c"></script>
+<script src="app.js?v=cec2161c4a"></script>
 </body>
 </html>
