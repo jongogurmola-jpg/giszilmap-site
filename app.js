@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "371489d332";  // replaced with the publish timestamp by publish.sh
+const BUILD = "15c690eac5";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -252,8 +252,7 @@ const OVERLAYS = [
   { id: "worship",   label: "Places of worship",  color: "#4a3aa7", on: false },
   { id: "stripclubs", label: "Strip clubs",         color: "#0b0b0b", on: false },
   { id: "housing",    label: "Public & subsidized housing", color: "#b5178a", on: false },
-  { id: "speed",     label: "Speed limits",       color: "#eda100", on: false },
-  { id: "traffic",   label: "Traffic volume / congestion", color: "#d03b3b", on: false },
+  { id: "roads",     label: "Roads: speed limits & traffic", color: "#eda100", on: false },
   { id: "parks",     label: "Parks",              color: "#008300", on: false },
   { id: "districts", label: "School districts",   color: "#52514e", on: false },
   { id: "schools",   label: "Schools",            color: SCHOOL_PUBLIC, on: false },
@@ -491,10 +490,7 @@ map.on("load", async () => {
     id: "speed", type: "line", source: "speed", "source-layer": "roads",
     layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
     paint: {
-      "line-color": ["case", ["!", ["has", "spd"]], SPEED_UNKNOWN,
-        ["step", ["get", "spd"],
-          SPEED_BINS[0][1], 21, SPEED_BINS[1][1], 26, SPEED_BINS[2][1],
-          36, SPEED_BINS[3][1], 46, SPEED_BINS[4][1], 56, SPEED_BINS[5][1]]],
+      "line-color": speedColorExpr(),
       "line-width": ["interpolate", ["exponential", 1.4], ["zoom"],
         8, ["case", ["<=", ["get", "fc"], 2], 1.6, 0.8],
         12, ["case", ["<=", ["get", "fc"], 2], 3.2, ["<=", ["get", "fc"], 4], 2.4, 1.6],
@@ -904,7 +900,8 @@ function buildPanel() {
     ? HASH.overlays.split(",").filter(Boolean)
     : store.get("overlays", null);
   for (const o of OVERLAYS) {
-    if (saved) o.on = saved.includes(o.id);
+    if (saved) o.on = saved.includes(o.id)
+      || (o.id === "roads" && (saved.includes("speed") || saved.includes("traffic")));   // pre-merge names
     const row = document.createElement("label");
     row.className = "orow";
     row.innerHTML = `<input type="checkbox" ${o.on ? "checked" : ""}>
@@ -968,7 +965,7 @@ function buildPanel() {
     applySchoolFilter();
   };
   applySchoolFilter();
-  const TDEF = { tmode: "vol", ttime: "day", tday: "wd", thour: "17" };
+  const TDEF = { tmode: "both", tspd: "", tvol: "", ttime: "day", tday: "wd", thour: "17" };
   for (const id of Object.keys(TDEF)) {
     $(id).value = HASH[id] ?? store.get(id, TDEF[id]);
     $(id).oninput = () => { store.set(id, $(id).value); applyTraffic(); };
@@ -1117,9 +1114,9 @@ function applyOverlays() {
       if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", vis);
   }
   applyValueMode();
-  const traffic = OVERLAYS.find(o => o.id === "traffic").on;
-  $("traffic-widget").hidden = !traffic;
-  if (traffic) applyTraffic(); else legendDots();
+  const roads = OVERLAYS.find(o => o.id === "roads").on;
+  $("traffic-widget").hidden = !roads;
+  applyTraffic();
 }
 
 /* "Asking vs model value": recolour the listing dots by the p22 model's
@@ -1258,26 +1255,61 @@ function trafficFactors() {
   return { f, daily, hours, mode, day, hourly: !daily || mode === "vc" };
 }
 
+function speedColorExpr() {
+  return ["case", ["!", ["has", "spd"]], SPEED_UNKNOWN,
+    ["step", ["get", "spd"],
+      SPEED_BINS[0][1], 21, SPEED_BINS[1][1], 26, SPEED_BINS[2][1],
+      36, SPEED_BINS[3][1], 46, SPEED_BINS[4][1], 56, SPEED_BINS[5][1]]];
+}
+
 function trafficVolumeExpr(f) {
   return ["*", ["get", "aadt"], ["match", ["get", "g"], 0, f[0], 1, f[1], 2, f[2], 3, f[3], f[4]]];
 }
 
+/* One "Roads" overlay over two sources: every street's speed limit (speed)
+   and the ODOT-counted segments' volumes (traffic, which also carries the
+   posted speed of the street under it). Speed-only views use the full street
+   layer; anything involving volume, or a traffic filter, uses the counted
+   segments, so an uncounted street never passes a volume test it was not
+   measured on. */
 function applyTraffic() {
-  if (!map.getLayer("traffic")) return;
+  if (!map.getLayer("traffic") || !map.getLayer("speed")) return;
+  const on = OVERLAYS.find(o => o.id === "roads").on;
   const t = trafficFactors();
-  $("thour-row").hidden = $("ttime").value !== "hour";
+  const mode = t.mode, volF = $("tvol").value, spdF = $("tspd").value;
+  $("thour-row").hidden = $("ttime").value !== "hour" || mode === "spd";
+  $("ttime-row").hidden = $("tday-row").hidden = mode === "spd";
   $("thour-val").textContent = `${$("thour").value.padStart(2, "0")}:00`;
   $("tday").disabled = t.daily;
-  $("ttime").options[0].textContent = t.mode === "vc" ? "busiest hour of the day" : "daily average";
+  $("ttime").options[0].textContent = mode === "vc" ? "busiest hour of the day" : "daily average";
+
+  const showSpeed = on && (mode === "spd" || mode === "both") && !volF;
+  const showTraffic = on && (mode !== "spd" || !!volF);
+  map.setLayoutProperty("speed", "visibility", showSpeed ? "visible" : "none");
+  map.setLayoutProperty("traffic", "visibility", showTraffic ? "visible" : "none");
+
+  const range = v => v ? v.split("-").map(Number) : null;
+  const sr = range(spdF), vr = range(volF);
+  const spdTest = sr ? [["has", "spd"], [">=", ["get", "spd"], sr[0]], ["<=", ["get", "spd"], sr[1]]] : [];
+  // the volume filter is on daily traffic (AADT), whatever hour is shown
+  const volTest = vr ? [[">=", ["get", "aadt"], vr[0]], ["<", ["get", "aadt"], vr[1]]] : [];
+  map.setFilter("speed", spdTest.length ? ["all", ...spdTest] : null);
+  map.setFilter("traffic", spdTest.length || volTest.length ? ["all", ...spdTest, ...volTest] : null);
+
   const vol = trafficVolumeExpr(t.f);
   let color, width;
-  if (t.mode === "vc") {
+  if (mode === "vc") {
     const vc = ["/", vol, ["max", ["get", "cap"], 1]];
     color = ["interpolate", ["linear"], vc, ...VC_STOPS.flat()];
     width = ["interpolate", ["linear"], ["zoom"], 8, 1.4, 12, 3, 15, 6];
+  } else if (mode === "spd") {
+    color = speedColorExpr();
+    width = ["interpolate", ["linear"], ["zoom"], 8, ["case", ["<=", ["get", "g"], 1], 1.6, 0.8],
+      12, ["case", ["<=", ["get", "g"], 1], 3.2, ["<=", ["get", "g"], 3], 2.4, 1.6],
+      15, ["case", ["<=", ["get", "g"], 1], 7, ["<=", ["get", "g"], 3], 5, 3.5]];
   } else {
     const stops = t.daily ? AADT_STOPS : VPH_STOPS;
-    color = ["interpolate", ["linear"], vol, ...stops.flat()];
+    color = mode === "both" ? speedColorExpr() : ["interpolate", ["linear"], vol, ...stops.flat()];
     const top = stops[stops.length - 1][0];
     const rel = ["min", 1, ["/", ["ln", ["max", vol, 1]], Math.log(top)]];
     width = ["interpolate", ["linear"], ["zoom"],
@@ -1285,6 +1317,8 @@ function applyTraffic() {
   }
   map.setPaintProperty("traffic", "line-color", color);
   map.setPaintProperty("traffic", "line-width", width);
+  // under the volume-width lines, uncounted streets stay as thin speed lines
+  map.setPaintProperty("speed", "line-opacity", mode === "both" ? 0.55 : 0.85);
   legendDots();
 }
 
@@ -1558,7 +1592,7 @@ async function loadMarketData() {
       }
       const p0 = v.features[0].properties;
       valMeta = { n, total: v.features.length, mae: p0.model_mae_pct, segment: p0.segment, asof: p0.asof };
-      if (!OVERLAYS.find(o => o.id === "traffic").on) legendDots();   // legend reads valMeta
+      if (!OVERLAYS.find(o => o.id === "roads").on) legendDots();   // legend reads valMeta
     }
     // the map sources take the parsed objects: one fetch, one parse, no second tiling pass
     map.getSource("listings")?.setData(l);
@@ -1957,20 +1991,28 @@ function legendDots() {
       ? `<em class="legend-note">= group with the biggest share gain, 2020 census → 2020-24 ACS; darker = larger gain · only gains of 2+ points beyond the survey's margin of error are shaded</em>`
       : `<em class="legend-note">= group with biggest share gain since 2000; darker = larger gain</em>`);
   }
-  if (OVERLAYS.find(o => o.id === "speed").on) {
-    for (const [, c, lab] of SPEED_BINS)
-      parts.push(`<span><i class="bar" style="background:${c}"></i>${lab}</span>`);
-    parts.push(`<span><i class="bar" style="background:${SPEED_UNKNOWN}"></i>not on file</span><em class="legend-note">mph · ODOT inventory, OSM-surveyed signs where mapped</em>`);
-  }
-  if (OVERLAYS.find(o => o.id === "traffic").on) {
+  if (OVERLAYS.find(o => o.id === "roads").on) {
     const t = trafficFactors();
-    const stops = t.mode === "vc" ? VC_STOPS : t.daily ? AADT_STOPS : VPH_STOPS;
-    const unit = t.mode === "vc" ? "" : t.daily ? " veh/day" : " veh/h";
-    for (const [v, c] of stops)
-      parts.push(`<span><i class="bar" style="background:${c}"></i>${t.mode === "vc" ? v.toFixed(2) : v.toLocaleString()}${unit}</span>`);
-    parts.push(t.mode === "vc"
-      ? `<em class="legend-note">volume ÷ capacity: 0.7 slowing · 0.85 heavy · ≥1 stop-and-go</em>`
-      : `<em class="legend-note">${t.daily ? "annual average daily traffic (both directions)" : "estimated vehicles per hour, both directions"}</em>`);
+    if (t.mode === "spd" || t.mode === "both") {
+      for (const [, c, lab] of SPEED_BINS)
+        parts.push(`<span><i class="bar" style="background:${c}"></i>${lab}</span>`);
+      if (t.mode === "spd" && !$("tvol").value)
+        parts.push(`<span><i class="bar" style="background:${SPEED_UNKNOWN}"></i>not on file</span>`);
+      parts.push(t.mode === "both"
+        ? `<em class="legend-note">colour = speed limit (mph) · width = ${t.daily ? "daily traffic" : "traffic at the chosen time"}; thin lines = streets ODOT has not counted</em>`
+        : `<em class="legend-note">mph · ODOT inventory, OSM-surveyed signs where mapped</em>`);
+    } else {
+      const stops = t.mode === "vc" ? VC_STOPS : t.daily ? AADT_STOPS : VPH_STOPS;
+      const unit = t.mode === "vc" ? "" : t.daily ? " veh/day" : " veh/h";
+      for (const [v, c] of stops)
+        parts.push(`<span><i class="bar" style="background:${c}"></i>${t.mode === "vc" ? v.toFixed(2) : v.toLocaleString()}${unit}</span>`);
+      parts.push(t.mode === "vc"
+        ? `<em class="legend-note">volume ÷ capacity: 0.7 slowing · 0.85 heavy · ≥1 stop-and-go</em>`
+        : `<em class="legend-note">${t.daily ? "annual average daily traffic (both directions)" : "estimated vehicles per hour, both directions"}</em>`);
+    }
+    if ($("tspd").value || $("tvol").value)
+      parts.push(`<em class="legend-note">filtered: ${[$("tspd").value && $("tspd").selectedOptions[0].textContent,
+        $("tvol").value && "traffic " + $("tvol").selectedOptions[0].textContent].filter(Boolean).join(" · ")}</em>`);
   }
   if (OVERLAYS.find(o => o.id === "housing").on) {
     for (const k of ["ph", "pba", "lihtc"])
@@ -2155,6 +2197,7 @@ function popupTraffic(lngLat, p) {
   const html =
     `<h3>${p.name || "(unnamed road)"}</h3>` +
     `<b>${(+p.aadt).toLocaleString()} vehicles/day</b> <span class="popup-kv">(AADT ${p.yr ?? ""}${trk})</span><br>` +
+    (p.spd != null ? `<b>${p.spd} mph</b> <span class="popup-kv">speed limit</span><br>` : "") +
     `<span class="popup-kv">${label}${p.rc ? " (inferred from volume)" : ""}${p.ln ? ` · ${p.ln} lanes` : ""} · capacity ≈ ${(+p.cap).toLocaleString()} veh/h ${p.src === "odot" ? "(ODOT model)" : "(planning default)"}</span><br>` +
     `<b>${whenTxt}:</b> ≈ ${vol.toLocaleString()} veh/h · v/c ${vc.toFixed(2)} — ${grade}` +
     (p.los ? `<br><span class="popup-kv">ODOT congestion model: LOS ${p.los}${p.pk != null ? `, peak hour ${p.pk}:00` : ""}${p.delay ? `, ${p.delay} veh-h delay/day` : ""}</span>` : "") +

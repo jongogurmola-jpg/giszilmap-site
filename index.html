@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
-<script>window.__EXPECTED_BUILD="371489d332";window.__TILE_V={"amenities.geojson":"160bc958c0","blockgroups.geojson":"24add8f2a2","colleges.geojson":"ce4fdad957","counties.geojson":"cab1f49037","crime_places.geojson":"2385d2af15","crime_trend.geojson":"09ed121c4f","grocery.geojson":"452b378d7e","housing.geojson":"363fa74d2c","listings.geojson":"ff55b82f06","marinas.geojson":"974798f6d5","parks.geojson":"a03156a2be","ppsf_contours.geojson":"e515e48dc0","school_districts.geojson":"fbe70e4c7d","schools.geojson":"57cdc36fec","sold.geojson":"5c7c566466","specialty_food.geojson":"010435de00","stripclubs.geojson":"9540e4c78f","valuation.geojson":"7195f02255","watch.geojson":"c2304b0f2a","worship.geojson":"02c5a7b5f3","bg_order.json":"11d3d39ad6","meta.json":"8511122767","model_scorecard.json":"c5f33594e6","outcomes_model.json":"b92a3aa0af","tax_profiles.json":"aa8fb7df7c","traffic_profiles.json":"750a253a75"};</script>
+<script>window.__EXPECTED_BUILD="15c690eac5";window.__TILE_V={"amenities.geojson":"160bc958c0","blockgroups.geojson":"24add8f2a2","colleges.geojson":"ce4fdad957","counties.geojson":"cab1f49037","crime_places.geojson":"2385d2af15","crime_trend.geojson":"09ed121c4f","grocery.geojson":"452b378d7e","housing.geojson":"363fa74d2c","listings.geojson":"ff55b82f06","marinas.geojson":"974798f6d5","parks.geojson":"a03156a2be","ppsf_contours.geojson":"e515e48dc0","school_districts.geojson":"fbe70e4c7d","schools.geojson":"57cdc36fec","sold.geojson":"5c7c566466","specialty_food.geojson":"010435de00","stripclubs.geojson":"9540e4c78f","valuation.geojson":"7195f02255","watch.geojson":"c2304b0f2a","worship.geojson":"02c5a7b5f3","bg_order.json":"11d3d39ad6","meta.json":"8511122767","model_scorecard.json":"c5f33594e6","outcomes_model.json":"b92a3aa0af","tax_profiles.json":"aa8fb7df7c","traffic_profiles.json":"750a253a75"};</script>
 <title>GISzilMap — Cleveland</title>
 <link rel="stylesheet" href="lib/maplibre-gl.css">
 <link rel="stylesheet" href="style.css?v=8f431a8ccc">
@@ -129,10 +129,28 @@
     </label>
     <div id="traffic-widget" class="twidget" hidden>
       <label>show <select id="tmode">
+        <option value="both">speed limit × traffic (colour × width)</option>
+        <option value="spd">speed limits</option>
         <option value="vol">traffic volume</option>
         <option value="vc">congestion (volume ÷ capacity)</option>
       </select></label>
-      <label>when <select id="ttime">
+      <label>speed limit <select id="tspd">
+        <option value="">any</option>
+        <option value="0-25">25 mph or less</option>
+        <option value="0-35">35 mph or less</option>
+        <option value="30-45">30–45 mph</option>
+        <option value="40-99">40 mph or more</option>
+        <option value="50-99">50 mph or more</option>
+      </select></label>
+      <label>traffic <select id="tvol">
+        <option value="">any (uncounted streets too)</option>
+        <option value="0-2000">under 2,000 vehicles/day</option>
+        <option value="0-5000">under 5,000/day</option>
+        <option value="0-10000">under 10,000/day</option>
+        <option value="10000-1e9">over 10,000/day</option>
+        <option value="20000-1e9">over 20,000/day</option>
+      </select></label>
+      <label id="ttime-row">when <select id="ttime">
         <option value="day">daily average</option>
         <option value="am">AM peak · 7–9</option>
         <option value="mid">midday · 11–13</option>
@@ -142,11 +160,11 @@
         <option value="hour">a single hour…</option>
       </select></label>
       <label id="thour-row" hidden><input id="thour" type="range" min="0" max="23" step="1" value="17"><span id="thour-val">17:00</span></label>
-      <label>on a <select id="tday">
+      <label id="tday-row">on a <select id="tday">
         <option value="wd">weekday</option>
         <option value="we">weekend day</option>
       </select></label>
-      <div class="note">AADT from ODOT count segments (mostly 2023–25); hour-of-day shape from FHWA hourly counts at Ohio's permanent stations, by road class. Congestion = estimated hourly volume ÷ hourly capacity (ODOT's model on state routes, planning defaults elsewhere) — a planning-level estimate, not live traffic.</div>
+      <div class="note">Speed limits: ODOT road inventory, replaced by OSM-surveyed posted signs where mapped. Only roads ODOT has counted carry a traffic volume (most arterials and collectors, few side streets), so a traffic choice hides the uncounted streets. AADT from ODOT count segments (mostly 2023–25); hour-of-day shape from FHWA hourly counts at Ohio's permanent stations, by road class. Congestion = estimated hourly volume ÷ hourly capacity (ODOT's model on state routes, planning defaults elsewhere) — a planning-level estimate, not live traffic.</div>
     </div>
     <div id="dot-legend" class="note"></div>
   </section>
@@ -210,6 +228,6 @@
 <script src="lib/maplibre-gl.js"></script>
 <script src="lib/pmtiles.js"></script>
 <script src="lib/basemaps.js"></script>
-<script src="app.js?v=371489d332"></script>
+<script src="app.js?v=15c690eac5"></script>
 </body>
 </html>
