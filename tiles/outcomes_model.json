@@ -1,18 +1,18 @@
 {
-  "asof": "2026-10-18 00:50:00",
+  "asof": "2026-10-18 06:48:00",
   "horizon_days": 7,
-  "scored_active": 6882,
+  "scored_active": 6888,
   "sale_to_list": {
-    "n_train": 4786,
-    "n_test": 2218,
-    "mae_model_pp": 3.83,
-    "mae_dom_only_pp": 4.0,
-    "mae_predict_median_pp": 4.19,
-    "auc_sells_above_asking": 0.799,
-    "auc_dom_only": 0.767,
+    "n_train": 4775,
+    "n_test": 2244,
+    "mae_model_pp": 3.85,
+    "mae_dom_only_pp": 4.01,
+    "mae_predict_median_pp": 4.2,
+    "auc_sells_above_asking": 0.795,
+    "auc_dom_only": 0.768,
     "auc_day_one_no_timing": 0.659,
     "band_coverage_raw": 0.509,
-    "band_widened_by_pp": 0.62,
+    "band_widened_by_pp": 0.57,
     "band_coverage_widened": 0.6
   },
   "p_cut": {
@@ -22,28 +22,28 @@
     "auc": 0.68,
     "auc_dom_only": 0.616,
     "brier": 0.1008,
-    "brier_base_rate": 0.1053,
-    "rate_in_top_decile": 0.251,
+    "brier_base_rate": 0.1054,
+    "rate_in_top_decile": 0.258,
     "calibration": [
       [
         0.032,
         0.037
       ],
       [
-        0.071,
+        0.07,
         0.075
       ],
       [
-        0.108,
-        0.107
+        0.107,
+        0.109
       ],
       [
-        0.153,
-        0.158
+        0.152,
+        0.154
       ],
       [
         0.235,
-        0.221
+        0.224
       ]
     ]
   },
@@ -53,9 +53,9 @@
     "base_rate": 0.1002,
     "auc": 0.743,
     "auc_dom_only": 0.686,
-    "brier": 0.0825,
+    "brier": 0.0824,
     "brier_base_rate": 0.0902,
-    "rate_in_top_decile": 0.312,
+    "rate_in_top_decile": 0.314,
     "calibration": [
       [
         0.017,
@@ -63,19 +63,19 @@
       ],
       [
         0.046,
-        0.048
+        0.045
       ],
       [
         0.079,
-        0.08
+        0.082
       ],
       [
-        0.128,
-        0.117
+        0.127,
+        0.115
       ],
       [
-        0.267,
-        0.238
+        0.266,
+        0.24
       ]
     ]
   }
