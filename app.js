@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "cec2161c4a";  // replaced with the publish timestamp by publish.sh
+const BUILD = "371489d332";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -16,7 +16,7 @@ const EMPTY_FC = { type: "FeatureCollection", features: [] };
 const LAZY_SRC = { crimetrend: "crime_trend.geojson", parks: "parks.geojson", amenities: "amenities.geojson",
   grocery: "grocery.geojson", worship: "worship.geojson", stripclubs: "stripclubs.geojson",
   housing: "housing.geojson", districts: "school_districts.geojson", ppsf: "ppsf_contours.geojson",
-  food: "specialty_food.geojson", marinas: "marinas.geojson" };
+  food: "specialty_food.geojson", marinas: "marinas.geojson", colleges: "colleges.geojson" };
 const loadedSrc = new Set();
 /* schools.geojson (p28): fetched once, used by the Schools layer and by every
    house pop-up's "likely public schools" line, which needs it even with the
@@ -102,6 +102,11 @@ const RAMP = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", 
 const FOOD = { bakery: ["#c58b3a", "bakery"], patisserie: ["#e87ba4", "patisserie"],
   fishmonger: ["#2a78d6", "fishmonger"], butcher: ["#d03b3b", "butcher"],
   fromagerie: ["#eda100", "fromagerie"], market: ["#6b7a2a", "market hall"] };
+
+// colleges (p33): colour by kind, size by enrollment
+const COLLEGE = { research: ["#7a1f3d", "research university (R1/R2)"], college: ["#c2457a", "four-year college / university"],
+  junior: ["#e8a33d", "community / junior college"], seminary: ["#5b6b8c", "seminary / faith-related"],
+  trade: ["#9a9893", "certificate-only trade school"] };
 
 // school markers: public (district, charter, STEM, career) vs private
 const SCHOOL_PUBLIC = "#0e7c86", SCHOOL_PRIVATE = "#b5651d";
@@ -242,6 +247,7 @@ const OVERLAYS = [
   { id: "amenities", label: "Cafés/bars/dining",  color: "#eb6834", on: false },
   { id: "grocery",   label: "Grocery stores",     color: "#1baf7a", on: false },
   { id: "food",      label: "Bakeries & specialty food", color: "#c58b3a", on: false },
+  { id: "colleges",  label: "Colleges & universities", color: "#7a1f3d", on: false },
   { id: "marinas",   label: "Marinas & boat slips", color: "#167c9a", on: false },
   { id: "worship",   label: "Places of worship",  color: "#4a3aa7", on: false },
   { id: "stripclubs", label: "Strip clubs",         color: "#0b0b0b", on: false },
@@ -548,6 +554,25 @@ map.on("load", async () => {
         "#4a3aa7"],  // bar/pub
       "circle-stroke-color": "#fcfcfb", "circle-stroke-width": 0.8,
     },
+  });
+
+  map.addSource("colleges", { type: "geojson", data: EMPTY_FC });
+  map.addLayer({
+    id: "colleges", type: "circle", source: "colleges", minzoom: 7,
+    paint: {
+      // area ~ students: 100 -> 4px, 2,000 -> 9px, 15,000 -> 18px at z12
+      "circle-radius": ["interpolate", ["linear"], ["zoom"],
+        8, ["*", 0.5, ["max", 3, ["^", ["coalesce", ["get", "enrollment"], 300], 0.3]]],
+        12, ["max", 4, ["^", ["coalesce", ["get", "enrollment"], 300], 0.3]]],
+      "circle-color": ["match", ["get", "kind"], ...Object.entries(COLLEGE).flatMap(([k, [c]]) => [k, c]), "#898781"],
+      "circle-opacity": 0.85, "circle-stroke-color": "#fcfcfb", "circle-stroke-width": 1.5,
+    },
+  });
+  map.addLayer({
+    id: "colleges-label", type: "symbol", source: "colleges", minzoom: 11,
+    layout: { "text-field": ["get", "name"], "text-size": 11, "text-font": ["Noto Sans Regular"],
+              "text-offset": [0, 1.2], "text-anchor": "top", "text-optional": true, "text-max-width": 10 },
+    paint: { "text-color": "#3d1020", "text-halo-color": "#fcfcfb", "text-halo-width": 1.3 },
   });
 
   map.addSource("food", { type: "geojson", data: EMPTY_FC });
@@ -907,6 +932,9 @@ function buildPanel() {
   $("trendperiod").value = store.get("trendperiod", "2000");
   $("trendperiod").onchange = () => { store.set("trendperiod", $("trendperiod").value); applyTrendPeriod(); legendDots(); };
   applyTrendPeriod();
+  $("collegekind").value = store.get("collegekind", "");
+  $("collegekind").onchange = () => { store.set("collegekind", $("collegekind").value); applyCollegeFilter(); };
+  applyCollegeFilter();
   for (const id of ["foodkind", "foodchain"]) {
     $(id).value = store.get(id, id === "foodchain" ? "indie" : "");
     $(id).onchange = () => { store.set(id, $(id).value); applyFoodFilter(); };
@@ -1018,6 +1046,34 @@ function fsqLine(p) {
     ? `<br><a href="${url}" target="_blank" rel="noopener noreferrer">★ ${(+p.fsq_rating).toFixed(1)}/10`
       + `${p.fsq_votes ? ` (${(+p.fsq_votes).toLocaleString()} ratings)` : ""} on Foursquare ↗</a>`
     : `<br><a href="${url}" target="_blank" rel="noopener noreferrer">Foursquare ↗</a> <span class="dim">no rating yet</span>`;
+}
+
+function applyCollegeFilter() {
+  if (!map.getLayer("colleges")) return;
+  const v = $("collegekind").value;
+  // default: every degree-granting kind; trade schools only when picked
+  const f = v ? ["==", ["get", "kind"], v] : ["!=", ["get", "kind"], "trade"];
+  for (const id of ["colleges", "colleges-label"]) map.setFilter(id, f);
+}
+
+function popupCollege(lngLat, p) {
+  const n = v => v == null ? null : (+v).toLocaleString();
+  const a = (u, t) => u ? `<a href="${u}" target="_blank" rel="noopener noreferrer">${t} ↗</a>` : null;
+  const links = [a(p.website, "website"), a(p.admissions, "admissions"), a(p.net_price, "net price calculator"),
+    p.unitid ? a(`https://nces.ed.gov/collegenavigator/?id=${p.unitid}`, "College Navigator") : null].filter(Boolean);
+  const students = p.enrollment != null
+    ? `${n(p.enrollment)} students${p.undergrad != null && p.grad ? ` (${n(p.undergrad)} undergraduate, ${n(p.grad)} graduate)` : ""}` : null;
+  new maplibregl.Popup({ maxWidth: "340px" }).setLngLat(lngLat).setHTML(
+    `<h3><span class="sch-dot" style="background:${COLLEGE[p.kind]?.[0]}"></span>${p.name}</h3>`
+    + `<b>${COLLEGE[p.kind]?.[1] ?? p.kind}</b>${p.control ? ` · ${p.control.toLowerCase()}` : ""}`
+    + `${p.religion ? ` · ${p.religion}` : ""}${+p.hbcu === 1 ? " · HBCU" : ""}${+p.landgrant === 1 ? " · land-grant" : ""}<br>`
+    + `${p.research ? `<span class="dim">${p.research}</span><br>` : ""}`
+    + `${p.carnegie ? `<span class="dim">Carnegie: ${p.carnegie}</span><br>` : ""}`
+    + `${students ? students + "<br>" : ""}`
+    + `${p.faculty_fte != null ? `${n(Math.round(p.faculty_fte))} instructional staff (full-time equivalent)<br>` : ""}`
+    + `<span class="dim">${p.address ?? ""}</span><br>`
+    + `${links.length ? `<div class="sch-links">${links.join(" · ")}</div>` : ""}`
+    + `<div class="dim">IPEDS: enrollment fall 2023, staff 2023-24${p.unitid ? "" : " · not in IPEDS"}</div>`).addTo(map);
 }
 
 function applyFoodFilter() {
@@ -1869,6 +1925,11 @@ function legendDots() {
     parts.push(`<span><i class="sq" style="background:${valueOn ? VALUE_NEUTRAL : LISTING_COLOR}"></i>square = asking price has changed</span>`);
   if (OVERLAYS.find(o => o.id === "sold").on)
     parts.push(`<span><i style="background:${SOLD_COLOR}"></i>sold</span>`);
+  if (OVERLAYS.find(o => o.id === "colleges").on) {
+    for (const [k, [c, lab]] of Object.entries(COLLEGE))
+      if (k !== "trade" || $("collegekind").value === "trade") parts.push(`<span><i style="background:${c}"></i>${lab}</span>`);
+    parts.push(`<em class="legend-note">IPEDS (NCES) · circle size = enrollment · research = Carnegie 2025 R1/R2</em>`);
+  }
   if (OVERLAYS.find(o => o.id === "food").on) {
     for (const [, [c, lab]] of Object.entries(FOOD))
       parts.push(`<span><i style="background:${c}"></i>${lab}</span>`);
@@ -1957,6 +2018,9 @@ function wirePopups() {
     feats = tryLayers(["housing"]);
     if (feats.length && map.getLayoutProperty("housing", "visibility") === "visible")
       return popupHousing(e.lngLat, feats[0].properties);
+    feats = tryLayers(["colleges"]);
+    if (feats.length && map.getLayoutProperty("colleges", "visibility") === "visible")
+      return popupCollege(e.lngLat, feats[0].properties);
     feats = tryLayers(["food"]);
     if (feats.length && map.getLayoutProperty("food", "visibility") === "visible") {
       const p = feats[0].properties;
@@ -2011,7 +2075,7 @@ function wirePopups() {
       return popupScorecard(e.lngLat, props);
     }
   });
-  for (const id of ["watch", "listings", "listings-sq", "schools", "food", "marinas", "sold", "grocery", "amenities", "worship", "housing", "traffic", "speed", "bg-fill"])
+  for (const id of ["watch", "listings", "listings-sq", "schools", "food", "marinas", "colleges", "sold", "grocery", "amenities", "worship", "housing", "traffic", "speed", "bg-fill"])
     map.on("mouseenter", id, () => map.getCanvas().style.cursor = "pointer");
 }
 

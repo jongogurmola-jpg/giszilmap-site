@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
-<script>window.__EXPECTED_BUILD="cec2161c4a";window.__TILE_V={"amenities.geojson":"160bc958c0","blockgroups.geojson":"24add8f2a2","counties.geojson":"cab1f49037","crime_places.geojson":"2385d2af15","crime_trend.geojson":"09ed121c4f","grocery.geojson":"452b378d7e","housing.geojson":"363fa74d2c","listings.geojson":"ff55b82f06","marinas.geojson":"974798f6d5","parks.geojson":"a03156a2be","ppsf_contours.geojson":"e515e48dc0","school_districts.geojson":"fbe70e4c7d","schools.geojson":"57cdc36fec","sold.geojson":"5c7c566466","specialty_food.geojson":"010435de00","stripclubs.geojson":"9540e4c78f","valuation.geojson":"7195f02255","watch.geojson":"c2304b0f2a","worship.geojson":"02c5a7b5f3","bg_order.json":"11d3d39ad6","meta.json":"8511122767","model_scorecard.json":"c5f33594e6","outcomes_model.json":"b92a3aa0af","tax_profiles.json":"aa8fb7df7c","traffic_profiles.json":"750a253a75"};</script>
+<script>window.__EXPECTED_BUILD="371489d332";window.__TILE_V={"amenities.geojson":"160bc958c0","blockgroups.geojson":"24add8f2a2","colleges.geojson":"ce4fdad957","counties.geojson":"cab1f49037","crime_places.geojson":"2385d2af15","crime_trend.geojson":"09ed121c4f","grocery.geojson":"452b378d7e","housing.geojson":"363fa74d2c","listings.geojson":"ff55b82f06","marinas.geojson":"974798f6d5","parks.geojson":"a03156a2be","ppsf_contours.geojson":"e515e48dc0","school_districts.geojson":"fbe70e4c7d","schools.geojson":"57cdc36fec","sold.geojson":"5c7c566466","specialty_food.geojson":"010435de00","stripclubs.geojson":"9540e4c78f","valuation.geojson":"7195f02255","watch.geojson":"c2304b0f2a","worship.geojson":"02c5a7b5f3","bg_order.json":"11d3d39ad6","meta.json":"8511122767","model_scorecard.json":"c5f33594e6","outcomes_model.json":"b92a3aa0af","tax_profiles.json":"aa8fb7df7c","traffic_profiles.json":"750a253a75"};</script>
 <title>GISzilMap — Cleveland</title>
 <link rel="stylesheet" href="lib/maplibre-gl.css">
 <link rel="stylesheet" href="style.css?v=8f431a8ccc">
@@ -88,6 +88,14 @@
     <label class="note">ethnicity trend
       <select id="trendperiod"><option value="2000">2000 → 2020 census</option>
         <option value="acs">2020 census → 2024 ACS</option></select>
+    </label>
+    <label class="note">colleges
+      <select id="collegekind"><option value="">all degree-granting</option>
+        <option value="research">research universities (R1/R2)</option>
+        <option value="college">four-year colleges & universities</option>
+        <option value="junior">community / junior colleges</option>
+        <option value="seminary">seminaries & faith-related</option>
+        <option value="trade">certificate-only trade schools</option></select>
     </label>
     <label class="note">food shops
       <select id="foodkind"><option value="">all types</option><option value="bakery">bakeries</option>
@@ -202,6 +210,6 @@
 <script src="lib/maplibre-gl.js"></script>
 <script src="lib/pmtiles.js"></script>
 <script src="lib/basemaps.js"></script>
-<script src="app.js?v=cec2161c4a"></script>
+<script src="app.js?v=371489d332"></script>
 </body>
 </html>
