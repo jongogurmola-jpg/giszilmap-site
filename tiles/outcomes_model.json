@@ -1,48 +1,48 @@
 {
-  "asof": "2026-10-19 18:32:00",
+  "asof": "2026-10-19 22:06:00",
   "horizon_days": 7,
-  "scored_active": 6833,
+  "scored_active": 6835,
   "sale_to_list": {
     "n_train": 4908,
-    "n_test": 2083,
-    "mae_model_pp": 3.84,
+    "n_test": 2084,
+    "mae_model_pp": 3.83,
     "mae_dom_only_pp": 4.02,
     "mae_predict_median_pp": 4.21,
     "auc_sells_above_asking": 0.798,
     "auc_dom_only": 0.756,
-    "auc_day_one_no_timing": 0.659,
-    "band_coverage_raw": 0.506,
-    "band_widened_by_pp": 0.61,
+    "auc_day_one_no_timing": 0.652,
+    "band_coverage_raw": 0.513,
+    "band_widened_by_pp": 0.65,
     "band_coverage_widened": 0.6
   },
   "p_cut": {
     "listing_days": 290380,
     "listings": 12246,
     "base_rate": 0.1198,
-    "auc": 0.679,
+    "auc": 0.678,
     "auc_dom_only": 0.615,
-    "brier": 0.1009,
-    "brier_base_rate": 0.1054,
-    "rate_in_top_decile": 0.258,
+    "brier": 0.101,
+    "brier_base_rate": 0.1055,
+    "rate_in_top_decile": 0.251,
     "calibration": [
       [
-        0.032,
+        0.033,
         0.04
       ],
       [
-        0.071,
-        0.075
+        0.072,
+        0.076
       ],
       [
-        0.107,
-        0.105
+        0.108,
+        0.106
       ],
       [
         0.152,
-        0.154
+        0.153
       ],
       [
-        0.235,
+        0.234,
         0.224
       ]
     ]
@@ -51,31 +51,31 @@
     "listing_days": 290380,
     "listings": 12246,
     "base_rate": 0.1001,
-    "auc": 0.743,
+    "auc": 0.744,
     "auc_dom_only": 0.685,
     "brier": 0.0823,
     "brier_base_rate": 0.0901,
-    "rate_in_top_decile": 0.314,
+    "rate_in_top_decile": 0.316,
     "calibration": [
       [
-        0.018,
+        0.017,
         0.02
       ],
       [
-        0.046,
-        0.048
+        0.045,
+        0.047
       ],
       [
-        0.079,
-        0.076
+        0.078,
+        0.075
       ],
       [
-        0.128,
+        0.126,
         0.115
       ],
       [
-        0.267,
-        0.242
+        0.266,
+        0.243
       ]
     ]
   }
