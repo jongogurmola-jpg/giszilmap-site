@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "15c690eac5";  // replaced with the publish timestamp by publish.sh
+const BUILD = "a3d2d77baa";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -2392,9 +2392,14 @@ function popupListing(lngLat, p) {
     if (el) el.outerHTML = likelySchoolsHtml(lngLat, bg);
   });
   const photo = p.photo
-    ? `<img src="${p.photo}" loading="lazy" alt="" referrerpolicy="no-referrer"
-         style="width:100%;max-height:200px;object-fit:cover;border-radius:5px;margin-bottom:6px"
-         onerror="this.remove()">` : "";
+    ? `<div class="listing-gallery" id="photo-${shareId}" aria-label="Listing photos">
+         <img class="listing-gallery-image" src="${p.photo}" loading="lazy" alt="Listing photo 1"
+              referrerpolicy="no-referrer" onerror="this.closest('.listing-gallery').remove()">
+         <button class="listing-gallery-prev" type="button" aria-label="Previous photo" hidden>‹</button>
+         <button class="listing-gallery-next" type="button" aria-label="Next photo" hidden>›</button>
+         <button class="listing-gallery-expand" type="button" aria-label="View photo full screen" title="View full screen">⤢</button>
+         <span class="listing-gallery-count" hidden></span>
+       </div>` : "";
   new maplibregl.Popup({ maxWidth: "380px" }).setLngLat(lngLat).setHTML(`
     ${photo}<h3>${badge}${price} · ${p.address ?? ""}</h3>
     ${p.city ?? ""} ${p.zip ?? ""}<br>
@@ -2416,6 +2421,125 @@ function popupListing(lngLat, p) {
     ${schoolsBlock}
     ${taxLine}
   `).addTo(map);
+  if (p.photo) setupListingGallery(shareId, p);
+}
+
+// Gallery shards are fetched only after a user opens a listing, and cached for
+// the session. The image files stay on the listing provider's CDN; swiping
+// changes one <img> URL at a time instead of preloading the whole gallery.
+const photoGalleryCache = new Map();
+async function setupListingGallery(id, p) {
+  const box = document.getElementById(`photo-${id}`);
+  if (!box) return;
+  const img = box.querySelector(".listing-gallery-image");
+  const prev = box.querySelector(".listing-gallery-prev");
+  const next = box.querySelector(".listing-gallery-next");
+  const expand = box.querySelector(".listing-gallery-expand");
+  const count = box.querySelector(".listing-gallery-count");
+  let urls = [p.photo], index = 0;
+  const show = (n) => {
+    index = (n + urls.length) % urls.length;
+    img.src = urls[index];
+    img.alt = `Listing photo ${index + 1} of ${urls.length}`;
+    count.textContent = `${index + 1} / ${urls.length}`;
+  };
+  const move = (step, e) => {
+    e?.preventDefault(); e?.stopPropagation();
+    if (urls.length > 1) show(index + step);
+  };
+  for (const [button, step] of [[prev, -1], [next, 1]])
+    button.addEventListener("click", e => move(step, e));
+  expand.addEventListener("click", e => {
+    e.preventDefault(); e.stopPropagation();
+    togglePhotoFullscreen(urls, index, (n) => { show(n); index = n; });
+  });
+  let touchX = null;
+  img.addEventListener("pointerdown", e => { touchX = e.clientX; });
+  img.addEventListener("pointerup", e => {
+    if (touchX == null) return;
+    const dx = e.clientX - touchX;
+    if (Math.abs(dx) > 35) move(dx < 0 ? 1 : -1, e);
+    touchX = null;
+  });
+  if (p.photo_gallery_id && p.photo_shard) {
+    const load = photoGalleryCache.get(p.photo_shard) ?? fetch(tile(`listing_photos_${p.photo_shard}.json`))
+      .then(r => r.ok ? r.json() : {})
+      .catch(() => ({}));
+    photoGalleryCache.set(p.photo_shard, load);
+    const shard = await load;
+    const gallery = shard[p.photo_gallery_id];
+    if (document.getElementById(`photo-${id}`) && Array.isArray(gallery) && gallery.length > 1) {
+      urls = gallery;
+      index = Math.max(0, urls.indexOf(p.photo));
+      prev.hidden = next.hidden = count.hidden = false;
+      show(index);
+    }
+  }
+}
+
+let activePhotoFullscreen = null;
+function togglePhotoFullscreen(urls, startIndex, onNavigate = () => {}) {
+  if (activePhotoFullscreen) {
+    activePhotoFullscreen.remove();
+    activePhotoFullscreen = null;
+    document.removeEventListener("keydown", activePhotoFullscreenKey);
+    return;
+  }
+  const overlay = document.createElement("div");
+  overlay.className = "photo-fullscreen";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.setAttribute("aria-label", "Listing photo viewer");
+  const image = document.createElement("img");
+  image.className = "photo-fullscreen-image";
+  image.alt = "Listing photo";
+  const close = document.createElement("button");
+  close.className = "photo-fullscreen-toggle";
+  close.type = "button";
+  close.setAttribute("aria-label", "Close full screen photo");
+  close.title = "Close full screen";
+  close.textContent = "×";
+  const makeArrow = (cls, label, glyph, delta) => {
+    const b = document.createElement("button");
+    b.className = cls; b.type = "button"; b.setAttribute("aria-label", label); b.textContent = glyph;
+    b.addEventListener("click", e => { e.stopPropagation(); render(index + delta); });
+    return b;
+  };
+  const prev = makeArrow("photo-fullscreen-prev", "Previous photo", "‹", -1);
+  const next = makeArrow("photo-fullscreen-next", "Next photo", "›", 1);
+  const count = document.createElement("span");
+  count.className = "photo-fullscreen-count";
+  let index = startIndex;
+  function render(n) {
+    index = (n + urls.length) % urls.length;
+    image.src = urls[index];
+    image.alt = `Listing photo ${index + 1} of ${urls.length}`;
+    count.textContent = `${index + 1} / ${urls.length}`;
+    prev.hidden = next.hidden = count.hidden = urls.length < 2;
+    onNavigate(index);
+  }
+  close.addEventListener("click", e => { e.stopPropagation(); togglePhotoFullscreen(urls, index); });
+  overlay.addEventListener("click", e => { if (e.target === overlay) togglePhotoFullscreen(urls, index); });
+  overlay.append(image, close, prev, next, count);
+  document.body.append(overlay);
+  activePhotoFullscreen = overlay;
+  let touchX = null;
+  image.addEventListener("pointerdown", e => { touchX = e.clientX; });
+  image.addEventListener("pointerup", e => {
+    if (touchX == null) return;
+    const dx = e.clientX - touchX;
+    if (Math.abs(dx) > 35 && urls.length > 1) render(index + (dx < 0 ? 1 : -1));
+    touchX = null;
+  });
+  document.addEventListener("keydown", activePhotoFullscreenKey);
+  render(startIndex);
+  close.focus();
+}
+function activePhotoFullscreenKey(e) {
+  if (!activePhotoFullscreen) return;
+  if (e.key === "Escape") togglePhotoFullscreen([], 0);
+  else if (e.key === "ArrowRight") activePhotoFullscreen.querySelector(".photo-fullscreen-next")?.click();
+  else if (e.key === "ArrowLeft") activePhotoFullscreen.querySelector(".photo-fullscreen-prev")?.click();
 }
 
 /* Model verdict for the popup: asking vs the p22 hedonic estimate. Gaps
