@@ -1,60 +1,60 @@
 {
-  "asof": "2026-11-01 18:34:00",
+  "asof": "2026-11-02 00:54:00",
   "horizon_days": 7,
-  "scored_active": 7077,
+  "scored_active": 7031,
   "sale_to_list": {
-    "n_train": 4896,
-    "n_test": 1911,
-    "mae_model_pp": 3.82,
-    "mae_dom_only_pp": 3.96,
-    "mae_predict_median_pp": 4.15,
-    "auc_sells_above_asking": 0.802,
-    "auc_dom_only": 0.77,
-    "auc_day_one_no_timing": 0.65,
-    "band_coverage_raw": 0.529,
-    "band_widened_by_pp": 0.42,
+    "n_train": 4819,
+    "n_test": 1888,
+    "mae_model_pp": 3.81,
+    "mae_dom_only_pp": 3.94,
+    "mae_predict_median_pp": 4.12,
+    "auc_sells_above_asking": 0.797,
+    "auc_dom_only": 0.772,
+    "auc_day_one_no_timing": 0.638,
+    "band_coverage_raw": 0.534,
+    "band_widened_by_pp": 0.4,
     "band_coverage_widened": 0.6
   },
   "p_cut": {
-    "listing_days": 379499,
-    "listings": 13886,
-    "base_rate": 0.1181,
-    "auc": 0.678,
-    "auc_dom_only": 0.615,
-    "brier": 0.0999,
-    "brier_base_rate": 0.1041,
-    "rate_in_top_decile": 0.24,
+    "listing_days": 386470,
+    "listings": 13969,
+    "base_rate": 0.1174,
+    "auc": 0.681,
+    "auc_dom_only": 0.616,
+    "brier": 0.0992,
+    "brier_base_rate": 0.1036,
+    "rate_in_top_decile": 0.243,
     "calibration": [
       [
         0.033,
-        0.036
+        0.034
       ],
       [
         0.072,
-        0.076
+        0.073
       ],
       [
         0.107,
-        0.107
+        0.111
       ],
       [
-        0.151,
-        0.153
+        0.15,
+        0.151
       ],
       [
-        0.229,
-        0.219
+        0.226,
+        0.218
       ]
     ]
   },
   "p_contract": {
-    "listing_days": 379499,
-    "listings": 13886,
-    "base_rate": 0.0963,
-    "auc": 0.742,
-    "auc_dom_only": 0.685,
-    "brier": 0.08,
-    "brier_base_rate": 0.087,
+    "listing_days": 386470,
+    "listings": 13969,
+    "base_rate": 0.0956,
+    "auc": 0.74,
+    "auc_dom_only": 0.684,
+    "brier": 0.0795,
+    "brier_base_rate": 0.0865,
     "rate_in_top_decile": 0.3,
     "calibration": [
       [
@@ -62,20 +62,20 @@
         0.019
       ],
       [
-        0.045,
-        0.044
+        0.044,
+        0.045
       ],
       [
-        0.077,
-        0.076
+        0.076,
+        0.077
       ],
       [
-        0.123,
-        0.109
+        0.122,
+        0.107
       ],
       [
-        0.257,
-        0.234
+        0.256,
+        0.23
       ]
     ]
   }
