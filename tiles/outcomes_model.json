@@ -1,81 +1,81 @@
 {
-  "asof": "2026-11-03 18:34:00",
+  "asof": "2026-11-04 00:52:00",
   "horizon_days": 7,
-  "scored_active": 7027,
+  "scored_active": 6971,
   "sale_to_list": {
-    "n_train": 4727,
-    "n_test": 2116,
-    "mae_model_pp": 3.82,
-    "mae_dom_only_pp": 3.97,
-    "mae_predict_median_pp": 4.15,
-    "auc_sells_above_asking": 0.805,
-    "auc_dom_only": 0.764,
-    "auc_day_one_no_timing": 0.653,
-    "band_coverage_raw": 0.527,
-    "band_widened_by_pp": 0.52,
+    "n_train": 4652,
+    "n_test": 2097,
+    "mae_model_pp": 3.8,
+    "mae_dom_only_pp": 3.93,
+    "mae_predict_median_pp": 4.11,
+    "auc_sells_above_asking": 0.793,
+    "auc_dom_only": 0.765,
+    "auc_day_one_no_timing": 0.658,
+    "band_coverage_raw": 0.531,
+    "band_widened_by_pp": 0.39,
     "band_coverage_widened": 0.6
   },
   "p_cut": {
-    "listing_days": 393347,
-    "listings": 14073,
-    "base_rate": 0.1176,
-    "auc": 0.68,
-    "auc_dom_only": 0.615,
-    "brier": 0.0994,
-    "brier_base_rate": 0.1037,
-    "rate_in_top_decile": 0.244,
+    "listing_days": 400386,
+    "listings": 14212,
+    "base_rate": 0.117,
+    "auc": 0.677,
+    "auc_dom_only": 0.616,
+    "brier": 0.0991,
+    "brier_base_rate": 0.1033,
+    "rate_in_top_decile": 0.241,
     "calibration": [
       [
         0.034,
         0.035
       ],
       [
-        0.073,
-        0.075
+        0.072,
+        0.076
       ],
       [
-        0.108,
-        0.107
+        0.107,
+        0.109
       ],
       [
         0.15,
-        0.152
+        0.148
       ],
       [
-        0.226,
-        0.219
+        0.225,
+        0.217
       ]
     ]
   },
   "p_contract": {
-    "listing_days": 393347,
-    "listings": 14073,
-    "base_rate": 0.0955,
+    "listing_days": 400386,
+    "listings": 14212,
+    "base_rate": 0.095,
     "auc": 0.744,
     "auc_dom_only": 0.684,
-    "brier": 0.0792,
-    "brier_base_rate": 0.0864,
-    "rate_in_top_decile": 0.302,
+    "brier": 0.0788,
+    "brier_base_rate": 0.086,
+    "rate_in_top_decile": 0.301,
     "calibration": [
       [
-        0.019,
-        0.019
+        0.018,
+        0.018
       ],
       [
-        0.046,
-        0.044
+        0.045,
+        0.043
       ],
       [
-        0.077,
-        0.073
+        0.076,
+        0.075
       ],
       [
-        0.122,
-        0.11
+        0.121,
+        0.107
       ],
       [
-        0.254,
-        0.232
+        0.256,
+        0.231
       ]
     ]
   }
