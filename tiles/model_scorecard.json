@@ -1,108 +1,108 @@
 {
  "scorecard": {
-  "n_pairs": 662,
+  "n_pairs": 685,
   "median_err_pct": 7.66,
-  "mean_err_pct": 9.88,
-  "p90_err_pct": 20.38,
+  "mean_err_pct": 9.87,
+  "p90_err_pct": 20.25,
   "bias_pct": 2.72,
-  "within_10pct": 65.1,
+  "within_10pct": 65.3,
   "median_lead_days": 33,
   "first_sale": "2026-09-29",
   "last_sale": "2026-11-10",
-  "auc_above_asking": 0.521,
-  "auc_n": 390,
+  "auc_above_asking": 0.525,
+  "auc_n": 406,
   "auc_base_rate": 0.308,
-  "called_cheap_sold_vs_ask_pct": -0.97,
+  "called_cheap_sold_vs_ask_pct": -0.75,
   "called_dear_sold_vs_ask_pct": -1.52,
-  "signal_spread_pp": 0.55,
-  "holdout_median_err_pct": 6.86,
-  "live_vs_holdout_ratio": 1.12,
+  "signal_spread_pp": 0.77,
+  "holdout_median_err_pct": 6.78,
+  "live_vs_holdout_ratio": 1.13,
   "status": "ok",
   "mode": "live log"
  },
  "model": {
-  "trained_on": 3310,
-  "r2_log": 0.7793,
-  "median_abs_err_pct": 6.86,
-  "mean_abs_err_pct": 8.58,
-  "scored_active": 1982,
+  "trained_on": 3334,
+  "r2_log": 0.7718,
+  "median_abs_err_pct": 6.78,
+  "mean_abs_err_pct": 8.66,
+  "scored_active": 1983,
   "ppsf_factor": {
-   "<150": 1.423,
-   "150-190": 0.905,
-   "190-240": 0.897,
-   "240+": 1.274
+   "<150": 1.329,
+   "150-190": 0.932,
+   "190-240": 0.93,
+   "240+": 1.26
   },
   "era_floor_pct": {
-   "<1920": 7.28,
-   "1920-49": 7.25,
-   "1950-79": 6.78,
-   "1980-2009": 6.63,
-   "2010+": 6.57
+   "<1920": 7.36,
+   "1920-49": 7.54,
+   "1950-79": 6.87,
+   "1980-2009": 6.36,
+   "2010+": 6.43
   },
-  "era_Q_over_df": 2.6,
-  "city_Q_over_df": 1.82,
+  "era_Q_over_df": 4.28,
+  "city_Q_over_df": 1.69,
   "city_factor_range": [
-   0.723,
-   1.194
+   0.769,
+   1.232
   ],
   "segment": "ppsf:120-300,price:250000-600000",
-  "asking_premium_pct": 1.6,
+  "asking_premium_pct": 1.7,
   "ptype": "single",
   "tiers": {
    "core": {
     "train": "ppsf:120-300,price:250000-600000",
     "score": "ppsf:120-300,price:250000-600000",
-    "trained_on": 3310,
-    "r2_log": 0.7793,
-    "median_abs_err_pct": 6.86,
-    "mean_abs_err_pct": 8.58,
-    "scored_active": 1739,
+    "trained_on": 3334,
+    "r2_log": 0.7718,
+    "median_abs_err_pct": 6.78,
+    "mean_abs_err_pct": 8.66,
+    "scored_active": 1744,
     "ppsf_factor": {
-     "<150": 1.423,
-     "150-190": 0.905,
-     "190-240": 0.897,
-     "240+": 1.274
+     "<150": 1.329,
+     "150-190": 0.932,
+     "190-240": 0.93,
+     "240+": 1.26
     },
     "era_floor_pct": {
-     "<1920": 7.28,
-     "1920-49": 7.25,
-     "1950-79": 6.78,
-     "1980-2009": 6.63,
-     "2010+": 6.57
+     "<1920": 7.36,
+     "1920-49": 7.54,
+     "1950-79": 6.87,
+     "1980-2009": 6.36,
+     "2010+": 6.43
     },
-    "era_Q_over_df": 2.6,
-    "city_Q_over_df": 1.82,
+    "era_Q_over_df": 4.28,
+    "city_Q_over_df": 1.69,
     "city_factor_range": [
-     0.723,
-     1.194
+     0.769,
+     1.232
     ]
    },
    "upper": {
     "train": "ppsf:120-350,price:550000-800000",
     "score": "ppsf:120-350,price:600001-800000",
-    "trained_on": 563,
-    "r2_log": 0.2024,
-    "median_abs_err_pct": 6.09,
-    "mean_abs_err_pct": 7.5,
-    "scored_active": 243,
+    "trained_on": 564,
+    "r2_log": 0.1917,
+    "median_abs_err_pct": 6.44,
+    "mean_abs_err_pct": 7.54,
+    "scored_active": 239,
     "ppsf_factor": {
-     "150-190": 0.982,
-     "190-240": 0.98,
-     "240+": 1.093
+     "150-190": 0.97,
+     "190-240": 1.001,
+     "240+": 1.087
     },
     "era_floor_pct": {
-     "1950-79": 7.01,
-     "1980-2009": 5.82,
-     "2010+": 5.76
+     "1950-79": 6.73,
+     "1980-2009": 6.18,
+     "2010+": 6.34
     },
-    "era_Q_over_df": 2.67,
-    "city_Q_over_df": 1.4,
+    "era_Q_over_df": 1.49,
+    "city_Q_over_df": 0.8,
     "city_factor_range": [
-     0.779,
-     1.046
+     1.0,
+     1.0
     ]
    }
   }
  },
- "written": "2026-11-11 06:31"
+ "written": "2026-11-11 12:30"
 }
