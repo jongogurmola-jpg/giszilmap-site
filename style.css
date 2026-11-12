@@ -107,6 +107,18 @@ select { width: 100%; padding: 5px; font-size: 13px; }
 .share-btn { font: inherit; font-size: 12px; padding: 2px 8px; cursor: pointer; color: #fcfcfb;
   background: #25d366; border: 0; border-radius: 4px; }
 .share-btn:hover { background: #1fb457; }
+.listing-watch-btn { font: inherit; font-size: 12px; margin-left: 5px; cursor: pointer; }
+.listing-watch-btn[aria-pressed="true"] { background: #e8e3fa; color: #36267f; }
+#my-watchlist summary { cursor: pointer; }
+#watchlist-export { margin-top: 8px; }
+.watchlist-region { margin: 12px 0 4px; font-size: 13px; }
+.watchlist-home { border-top: 1px solid #ddd; padding: 7px 0; }
+.watchlist-home dl { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px 8px; }
+.watchlist-home dt { font-weight: 600; }
+.watchlist-home dd { margin: 0; overflow-wrap: anywhere; }
+.watchlist-edit { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 4px 0; }
+.watchlist-edit input { min-width: 0; }
+.watchlist-home textarea { box-sizing: border-box; display: block; width: 100%; margin-top: 6px; min-height: 54px; }
 
 #tax-section .tax-earner { display: flex; gap: 8px; align-items: center; font-size: 12px; margin: 4px 0; }
 #tax-section .tax-earner label { display: flex; gap: 4px; align-items: center; }

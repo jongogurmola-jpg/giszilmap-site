@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "a3d2d77baa";  // replaced with the publish timestamp by publish.sh
+const BUILD = "3a2441b98d";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -1598,6 +1598,7 @@ async function loadMarketData() {
     map.getSource("listings")?.setData(l);
     map.getSource("watch")?.setData(w);
     mktData = { listings: wrapMkt(l), sold: soldFC ? wrapMkt(soldFC) : [] };
+    refreshWatchlist(l.features);
   } catch (e) {
     console.warn("market data", e);
     mktData = { listings: [], sold: [] };
@@ -2360,6 +2361,249 @@ function likelySchoolsHtml(lngLat, bg) {
     + rows.map(r => `${r.label}: ${r.html}`).join("<br>") + `</div>`;
 }
 
+const watchFields = {
+  address: "Address", city: "City", zip: "ZIP", region: "Region", ptype: "Property type",
+  status: "Last observed status", fetched: "Last observed date",
+  price: "Price", saved_price: "Price when saved", price_per_sqft: "Price per sq ft",
+  sqft: "Living area (sq ft)", lot_sqft: "Lot (sq ft)", beds: "Beds", baths: "Baths",
+  year_built: "Year built", stories: "Levels", heating: "Heating", cooling: "Cooling",
+  grc_car_min: "GRC drive (min)", grc_transit_min: "GRC transit (min)",
+  grc_bike_min: "GRC bike (min)", attributes: "Advertised updates and features",
+  text: "Listing remarks", notes: "My notes", saved_at: "Saved at", url: "Listing URL",
+};
+let watchlist = {};
+try { watchlist = store.get("watchlist", {}) ?? {}; } catch (err) { console.warn(err); }
+const watchKey = p => [p.address, p.city, p.zip]
+  .map(s => String(s ?? "").trim().toLowerCase().replace(/\s+/g, " ")).join("|");
+const watchRegions = ["Inner Core", "West Side", "East Side", "South Side", "Unclassified"];
+const watchAddressOrder = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
+
+function watchRegion(ll) {
+  if (!Array.isArray(ll) || ll.length < 2 || !ll.slice(0, 2).every(Number.isFinite))
+    return "Unclassified";
+  const [lon, lat] = ll;
+  // Public Square is the reference point. Use approximate straight-line miles
+  // so these groups also work for existing saves and across city boundaries.
+  const east = (lon + 81.6946) * 52;
+  const north = (lat - 41.4993) * 69;
+  if (Math.hypot(east, north) <= 3) return "Inner Core";
+  if (north < -6 && Math.abs(east) <= 4) return "South Side";
+  return east < 0 ? "West Side" : "East Side";
+}
+
+function sortedWatchEntries() {
+  return Object.entries(watchlist)
+    .map(([key, p]) => [key, { ...p, region: watchRegion(p.ll) }])
+    .sort(([, a], [, b]) => watchRegions.indexOf(a.region) - watchRegions.indexOf(b.region)
+      || watchAddressOrder.compare(a.city ?? "", b.city ?? "")
+      || watchAddressOrder.compare(a.address ?? "", b.address ?? ""));
+}
+
+const listingDetailsCache = new Map();
+function listingDetailShard(url) {
+  return new TextEncoder().encode(url).reduce((sum, byte) => sum + byte, 0) % 16;
+}
+
+function saveWatchlist(next) {
+  try {
+    store.set("watchlist", next);
+  } catch (err) {
+    toast("Could not save the watchlist in this browser.");
+    return false;
+  }
+  watchlist = next;
+  renderWatchlist();
+  return true;
+}
+
+function watchSnapshot(p, ll, old = {}) {
+  const entry = { ...old, ll };
+  for (const key of Object.keys(watchFields)) {
+    if (p[key] != null && p[key] !== "") entry[key] = p[key];
+  }
+  entry.price_per_sqft = entry.price > 0 && entry.sqft > 0
+    ? Math.round(entry.price / entry.sqft) : null;
+  return { ...entry, ...old.edited_fields };
+}
+
+function refreshWatchlist(features) {
+  const next = { ...watchlist };
+  let changed = false;
+  for (const { properties: p, geometry } of features) {
+    const key = watchKey(p);
+    if (!next[key]) continue;
+    const updated = watchSnapshot(p, geometry.coordinates, next[key]);
+    if (JSON.stringify(updated) === JSON.stringify(next[key])) continue;
+    next[key] = updated;
+    changed = true;
+  }
+  if (changed) saveWatchlist(next);
+}
+
+async function enrichWatchlist() {
+  const shards = new Set(Object.values(watchlist).filter(p => p.url)
+    .map(p => listingDetailShard(p.url)));
+  const loaded = new Map(await Promise.all([...shards].map(async shard => {
+    if (!listingDetailsCache.has(shard)) {
+      listingDetailsCache.set(shard, fetch(tile(`listing_details_${shard}.json`))
+        .then(r => r.ok ? r.json() : {})
+        .catch(() => { listingDetailsCache.delete(shard); return {}; }));
+    }
+    return [shard, await listingDetailsCache.get(shard)];
+  })));
+  const next = { ...watchlist };
+  let changed = false;
+  for (const [key, p] of Object.entries(next)) {
+    const detailsForHome = p.url && loaded.get(listingDetailShard(p.url))?.[p.url];
+    if (!detailsForHome) continue;
+    const updated = { ...p, ...detailsForHome, ...p.edited_fields };
+    // Preserve the seller's wording, including dates and qualifications.
+    updated.attributes = updated.text?.split(/(?<=[.!?])\s+|\n+/)
+      .filter(s => /\b(roof|furnace|boiler|radiator|hvac|heat pump|central air|air conditioning|mini.split|appliances?|refrigerator|water heater|windows|electrical|plumbing|renovat\w*|remodel\w*|updated|replaced)\b/i.test(s))
+      .join(" ");
+    if (JSON.stringify(updated) === JSON.stringify(p)) continue;
+    next[key] = updated;
+    changed = true;
+  }
+  if (changed) saveWatchlist(next);
+}
+
+function renderWatchlist() {
+  const root = $("watchlist-items");
+  const expanded = new Set([...root.querySelectorAll(".watchlist-home[open]")]
+    .map(card => card.dataset.key));
+  const entries = sortedWatchEntries();
+  $("watchlist-count").textContent = "(" + entries.length + ")";
+  $("watchlist-export").disabled = !entries.length;
+  root.replaceChildren();
+  if (!entries.length) root.textContent = "Use Watch on a listing to save it here.";
+  let region;
+  for (const [key, p] of entries) {
+    if (p.region !== region) {
+      region = p.region;
+      const heading = document.createElement("h3");
+      heading.className = "watchlist-region";
+      heading.textContent = region;
+      root.append(heading);
+    }
+    const card = document.createElement("details");
+    card.className = "watchlist-home";
+    card.dataset.key = key;
+    card.open = expanded.has(key);
+    const summary = document.createElement("summary");
+    summary.textContent = [p.address, p.city, p.price ? money(p.price) : null].filter(Boolean).join(" · ");
+    card.append(summary);
+    const facts = document.createElement("dl");
+    for (const [field, label] of Object.entries(watchFields)) {
+      if (["address", "city", "region", "notes", "url", "text", "stories", "heating", "cooling"].includes(field)) continue;
+      const value = p[field];
+      if (value == null || value === "") continue;
+      const term = document.createElement("dt");
+      const detail = document.createElement("dd");
+      term.textContent = label;
+      detail.textContent = ["price", "saved_price", "price_per_sqft"].includes(field) ? money(value) : value;
+      facts.append(term, detail);
+    }
+    card.append(facts);
+    for (const field of ["stories", "heating", "cooling"]) {
+      const label = document.createElement("label");
+      label.className = "watchlist-edit";
+      label.textContent = watchFields[field];
+      const input = document.createElement("input");
+      input.value = p[field] ?? "";
+      input.placeholder = "Not supplied";
+      input.addEventListener("change", () => {
+        const current = watchlist[key];
+        if (!current) return;
+        const value = input.value.trim();
+        const edited_fields = { ...current.edited_fields, [field]: value };
+        saveWatchlist({ ...watchlist, [key]: { ...current, [field]: value, edited_fields } });
+      });
+      label.append(input);
+      card.append(label);
+    }
+    if (p.text) {
+      const remarks = document.createElement("details");
+      const heading = document.createElement("summary");
+      heading.textContent = "Listing remarks";
+      remarks.append(heading, p.text);
+      card.append(remarks);
+    }
+    const notes = document.createElement("textarea");
+    notes.placeholder = "My notes, including HVAC or appliance details";
+    notes.setAttribute("aria-label", "Notes for " + p.address);
+    notes.value = p.notes ?? "";
+    notes.addEventListener("change", () => {
+      if (!watchlist[key]) return;
+      const next = { ...watchlist, [key]: { ...watchlist[key], notes: notes.value } };
+      try { store.set("watchlist", next); watchlist = next; }
+      catch (err) { toast("Could not save notes in this browser."); }
+    });
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "Remove";
+    remove.onclick = () => {
+      const next = { ...watchlist };
+      delete next[key];
+      saveWatchlist(next);
+      updateWatchButtons();
+    };
+    if (/^https?:\/\//i.test(p.url ?? "")) {
+      const link = document.createElement("a");
+      link.href = p.url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = "Open listing ↗";
+      card.append(link, " ");
+    }
+    if (p.ll?.length === 2) {
+      const locate = document.createElement("button");
+      locate.type = "button";
+      locate.textContent = "Show on map";
+      locate.onclick = () => {
+        if (!map.loaded() && !bgData) return;
+        map.flyTo({ center: p.ll, zoom: Math.max(map.getZoom(), 15), duration: 700 });
+        map.once("moveend", () => popupListing({ lng: p.ll[0], lat: p.ll[1] }, p));
+        if (matchMedia("(max-width: 640px)").matches) $("panel").classList.add("hidden");
+      };
+      card.append(locate, " ");
+    }
+    card.append(remove, notes);
+    root.append(card);
+  }
+}
+
+function updateWatchButtons() {
+  for (const button of document.querySelectorAll(".listing-watch-btn")) {
+    const saved = Boolean(watchlist[button.dataset.watchKey]);
+    button.textContent = saved ? "Watching ✓" : "Watch";
+    button.setAttribute("aria-pressed", String(saved));
+  }
+}
+
+$("my-watchlist").addEventListener("toggle", () => {
+  if ($("my-watchlist").open) enrichWatchlist();
+});
+$("watchlist-export").addEventListener("click", async () => {
+  await enrichWatchlist();
+  const cell = value => {
+    let s = String(value ?? "");
+    // Keep seller remarks and personal notes from becoming spreadsheet formulas.
+    if (typeof value === "string" && /^[\s]*[=+@-]/.test(s)) s = "'" + s;
+    return '"' + s.replaceAll('"', '""') + '"';
+  };
+  const rows = [Object.values(watchFields), ...sortedWatchEntries()
+    .map(([, p]) => Object.keys(watchFields).map(key => p[key]))];
+  const url = URL.createObjectURL(new Blob(["\ufeff", rows.map(r => r.map(cell).join(",")).join("\r\n")],
+    { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "house-watchlist.csv";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+renderWatchlist();
+
 function popupListing(lngLat, p) {
   const price = p.price ? "$" + (+p.price).toLocaleString() : "—";
   const shareId = String(shareCache.size + 1);
@@ -2416,11 +2660,31 @@ function popupListing(lngLat, p) {
     <a href="${p.url}" target="_blank" rel="noopener noreferrer">listing ↗ (${p.source})</a>
     ${p.sb_url ? ` · <a href="${p.sb_url}" target="_blank" rel="noopener noreferrer" title="Shaker Heights Historical Society building survey">shakerbuildings ↗</a>` : ""}
     &nbsp;·&nbsp; <button class="share-btn" onclick="shareListing('${shareId}')">Share ⇪</button>
+    <button type="button" class="listing-watch-btn" id="watch-${shareId}">Watch</button>
     ${valueLine(p)}
     ${hood}
     ${schoolsBlock}
     ${taxLine}
   `).addTo(map);
+  const watchButton = $("watch-" + shareId);
+  const key = watchKey(p);
+  watchButton.dataset.watchKey = key;
+  watchButton.onclick = () => {
+    const next = { ...watchlist };
+    const adding = !next[key];
+    if (adding) {
+      const commute = baseCommute.get(bg?.GEOID);
+      next[key] = watchSnapshot(p, [lngLat.lng, lngLat.lat], {
+        saved_at: new Date().toISOString(), saved_price: p.price,
+        grc_car_min: commute?.car_min, grc_transit_min: commute?.transit_min,
+        grc_bike_min: commute?.bike_min,
+      });
+    } else delete next[key];
+    if (!saveWatchlist(next)) return;
+    updateWatchButtons();
+    if (adding) enrichWatchlist();
+  };
+  updateWatchButtons();
   if (p.photo) setupListingGallery(shareId, p);
 }
 
