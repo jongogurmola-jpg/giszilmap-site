@@ -1,49 +1,49 @@
 {
-  "asof": "2026-11-13 00:54:00",
+  "asof": "2026-11-13 06:35:00",
   "horizon_days": 7,
-  "scored_active": 7116,
+  "scored_active": 7129,
   "sale_to_list": {
-    "n_train": 4455,
-    "n_test": 2067,
-    "mae_model_pp": 3.76,
-    "mae_dom_only_pp": 3.86,
-    "mae_predict_median_pp": 4.07,
-    "auc_sells_above_asking": 0.801,
-    "auc_dom_only": 0.768,
+    "n_train": 4551,
+    "n_test": 1987,
+    "mae_model_pp": 3.71,
+    "mae_dom_only_pp": 3.81,
+    "mae_predict_median_pp": 4.02,
+    "auc_sells_above_asking": 0.8,
+    "auc_dom_only": 0.77,
     "auc_day_one_no_timing": 0.632,
-    "band_coverage_raw": 0.522,
-    "band_widened_by_pp": 0.5,
+    "band_coverage_raw": 0.505,
+    "band_widened_by_pp": 0.65,
     "band_coverage_widened": 0.6
   },
   "p_cut": {
     "listing_days": 463274,
     "listings": 15336,
     "base_rate": 0.1166,
-    "auc": 0.681,
+    "auc": 0.68,
     "auc_dom_only": 0.615,
-    "brier": 0.0986,
+    "brier": 0.0987,
     "brier_base_rate": 0.103,
-    "rate_in_top_decile": 0.251,
+    "rate_in_top_decile": 0.246,
     "calibration": [
       [
         0.034,
-        0.035
+        0.037
       ],
       [
-        0.072,
-        0.074
+        0.073,
+        0.072
       ],
       [
         0.107,
         0.108
       ],
       [
-        0.149,
-        0.15
+        0.148,
+        0.152
       ],
       [
         0.223,
-        0.217
+        0.215
       ]
     ]
   },
@@ -52,10 +52,10 @@
     "listings": 15336,
     "base_rate": 0.0932,
     "auc": 0.743,
-    "auc_dom_only": 0.682,
+    "auc_dom_only": 0.681,
     "brier": 0.0777,
     "brier_base_rate": 0.0845,
-    "rate_in_top_decile": 0.293,
+    "rate_in_top_decile": 0.291,
     "calibration": [
       [
         0.018,
@@ -63,11 +63,11 @@
       ],
       [
         0.045,
-        0.044
+        0.046
       ],
       [
         0.076,
-        0.072
+        0.07
       ],
       [
         0.119,
@@ -75,7 +75,7 @@
       ],
       [
         0.248,
-        0.225
+        0.226
       ]
     ]
   }
