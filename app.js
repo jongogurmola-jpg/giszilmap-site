@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "3a2441b98d";  // replaced with the publish timestamp by publish.sh
+const BUILD = "f650162f73";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -1113,6 +1113,7 @@ function applyOverlays() {
     for (const id of [o.id, o.id + "-label", o.id + "-line", o.id + "-sq"])
       if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", vis);
   }
+  updateWatchlistMap();
   applyValueMode();
   const roads = OVERLAYS.find(o => o.id === "roads").on;
   $("traffic-widget").hidden = !roads;
@@ -2046,6 +2047,13 @@ function wirePopups() {
     const box = [[e.point.x - pad, e.point.y - pad], [e.point.x + pad, e.point.y + pad]];
     const tryLayers = (ids) => map.queryRenderedFeatures(box, { layers: ids.filter(l => map.getLayer(l)) });
 
+    const saved = tryLayers(["personal-watchlist"]);
+    if (saved.length) {
+      const key = saved[0].properties.key;
+      const p = watchlist[key];
+      if (p) openWatchedHome(key, p);
+      return;
+    }
     let feats = tryLayers(["watch"]);
     if (feats.length && map.getLayoutProperty("watch", "visibility") === "visible") {
       // the listing record carries everything (photo, model lines); fall back to the layer's own fields
@@ -2118,7 +2126,7 @@ function wirePopups() {
       return popupScorecard(e.lngLat, props);
     }
   });
-  for (const id of ["watch", "listings", "listings-sq", "schools", "food", "marinas", "colleges", "sold", "grocery", "amenities", "worship", "housing", "traffic", "speed", "bg-fill"])
+  for (const id of ["personal-watchlist", "watch", "listings", "listings-sq", "schools", "food", "marinas", "colleges", "sold", "grocery", "amenities", "worship", "housing", "traffic", "speed", "bg-fill"])
     map.on("mouseenter", id, () => map.getCanvas().style.cursor = "pointer");
 }
 
@@ -2413,7 +2421,76 @@ function saveWatchlist(next) {
   }
   watchlist = next;
   renderWatchlist();
+  updateWatchlistMap();
+  updateWatchButtons();
   return true;
+}
+
+function updateWatchlistMap() {
+  if (!map.getLayer("listings")) return;
+  const mode = $("watchlist-map-mode").value;
+  const id = "personal-watchlist";
+  if (!map.getSource(id)) {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 48;
+    const ctx = canvas.getContext("2d");
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = Math.PI / 3 * i;
+      const x = 24 + 19 * Math.cos(angle);
+      const y = 24 + 19 * Math.sin(angle);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = "#7fff00";
+    ctx.fill();
+    ctx.strokeStyle = "#da70d6";
+    ctx.lineWidth = 7;
+    ctx.lineJoin = "round";
+    ctx.stroke();
+    map.addImage(id, ctx.getImageData(0, 0, 48, 48), { pixelRatio: 2 });
+    map.addSource(id, { type: "geojson", data: EMPTY_FC });
+    map.addLayer({ id, type: "symbol", source: id, layout: {
+      "icon-image": id, "icon-allow-overlap": true, "icon-ignore-placement": true,
+      "icon-size": ["interpolate", ["linear"], ["zoom"], 8, 0.7, 15, 1],
+    } });
+  }
+  for (const layer of ["listings", "listings-sq", "sold", "watch"]) {
+    const overlay = OVERLAYS.find(o => o.id === (layer === "listings-sq" ? "listings" : layer));
+    if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", mode !== "only" && overlay?.on ? "visible" : "none");
+  }
+  map.setLayoutProperty(id, "visibility", mode === "off" ? "none" : "visible");
+  map.getSource(id).setData({ type: "FeatureCollection", features: Object.entries(watchlist)
+    .filter(([, p]) => validWatchLocation(p.ll))
+    .map(([key, p]) => ({ type: "Feature", properties: { key },
+      geometry: { type: "Point", coordinates: p.ll } })) });
+}
+
+function validWatchLocation(ll) {
+  return Array.isArray(ll) && ll.length === 2 && ll.every(Number.isFinite)
+    && Math.abs(ll[0]) <= 180 && Math.abs(ll[1]) <= 90;
+}
+
+function openWatchedHome(key, p) {
+  const current = mktData?.listings.find(row => watchKey(row.p) === key);
+  const [lng, lat] = p.ll;
+  if (current) return popupListing({ lng, lat }, current.p);
+  const box = document.createElement("div");
+  const title = document.createElement("h3");
+  title.textContent = p.address;
+  box.append(title, [p.city, p.price ? money(p.price) : ""].filter(Boolean).join(" · "));
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.textContent = "Watching ✓";
+  const popup = new maplibregl.Popup().setLngLat(p.ll).setDOMContent(box);
+  remove.onclick = () => {
+    const next = { ...watchlist };
+    delete next[key];
+    if (saveWatchlist(next)) popup.remove();
+  };
+  box.append(document.createElement("br"), remove);
+  popup.addTo(map);
 }
 
 function watchSnapshot(p, ll, old = {}) {
@@ -2556,14 +2633,14 @@ function renderWatchlist() {
       link.textContent = "Open listing ↗";
       card.append(link, " ");
     }
-    if (p.ll?.length === 2) {
+    if (validWatchLocation(p.ll)) {
       const locate = document.createElement("button");
       locate.type = "button";
       locate.textContent = "Show on map";
       locate.onclick = () => {
         if (!map.loaded() && !bgData) return;
         map.flyTo({ center: p.ll, zoom: Math.max(map.getZoom(), 15), duration: 700 });
-        map.once("moveend", () => popupListing({ lng: p.ll[0], lat: p.ll[1] }, p));
+        map.once("moveend", () => openWatchedHome(key, p));
         if (matchMedia("(max-width: 640px)").matches) $("panel").classList.add("hidden");
       };
       card.append(locate, " ");
@@ -2584,6 +2661,99 @@ function updateWatchButtons() {
 $("my-watchlist").addEventListener("toggle", () => {
   if ($("my-watchlist").open) enrichWatchlist();
 });
+const watchlistMapMode = $("watchlist-map-mode");
+try {
+  const mode = store.get("watchlistMapMode", "off");
+  if (["off", "alongside", "only"].includes(mode)) watchlistMapMode.value = mode;
+} catch (err) { console.warn(err); }
+watchlistMapMode.addEventListener("change", () => {
+  try { store.set("watchlistMapMode", watchlistMapMode.value); }
+  catch (err) { console.warn(err); }
+  updateWatchlistMap();
+});
+$("watchlist-import").onclick = () => $("watchlist-file").click();
+
+function parseWatchlistCsv(text) {
+  // The exporter quotes every cell, including remarks with commas and newlines.
+  const rows = [];
+  let row = [], field = "", quoted = false, closed = false;
+  text = text.replace(/^\ufeff/, "");
+  for (let i = 0; i <= text.length; i++) {
+    const ch = text[i];
+    if (quoted) {
+      if (ch === undefined) throw new Error("A quoted CSV field is incomplete.");
+      if (ch === '"' && text[i + 1] === '"') { field += '"'; i++; }
+      else if (ch === '"') { quoted = false; closed = true; }
+      else field += ch;
+    } else if (ch === "," || ch === "\r" || ch === "\n" || ch === undefined) {
+      row.push(field);
+      field = "";
+      closed = false;
+      if (ch !== ",") {
+        if (row.some(Boolean)) rows.push(row);
+        row = [];
+        if (ch === "\r" && text[i + 1] === "\n") i++;
+      }
+    } else if (ch === '"' && !field && !closed) quoted = true;
+    else if (closed || ch === '"') throw new Error("Invalid CSV quoting.");
+    else field += ch;
+  }
+  return rows;
+}
+
+$("watchlist-file").addEventListener("change", async event => {
+  const input = event.target;
+  const file = input.files[0];
+  if (!file) return;
+  input.value = "";
+  const status = $("watchlist-import-status");
+  try {
+    if (file.size > 5 * 1024 * 1024) throw new Error("Choose a watchlist CSV under 5 MB.");
+    const [headers, ...rows] = parseWatchlistCsv(await file.text());
+    if (!headers?.includes("Address") || !headers.includes("City"))
+      throw new Error("Choose a watchlist CSV with Address and City columns.");
+    const columns = { ...watchFields, lat: "Latitude", lon: "Longitude" };
+    const indexes = Object.entries(columns).map(([key, label]) => [key, headers.indexOf(label)]);
+    if (marketReady) await marketReady;
+    const live = new Map((mktData?.listings ?? []).map(r => [watchKey(r.p), r]));
+    const byAddress = new Map();
+    for (const r of live.values()) {
+      const key = watchKey({ ...r.p, zip: "" });
+      byAddress.set(key, byAddress.has(key) ? null : r);
+    }
+    const next = { ...watchlist };
+    let added = 0, skipped = 0, unmapped = 0;
+    for (const row of rows) {
+      const p = {};
+      for (const [key, index] of indexes) {
+        if (index >= 0 && row[index]?.trim()) p[key] = row[index];
+      }
+      if (!p.address || !p.city) { skipped++; continue; }
+      const current = live.get(watchKey(p)) ?? (!p.zip && byAddress.get(watchKey(p)));
+      if (current && !p.zip) p.zip = current.p.zip;
+      const key = watchKey(p);
+      if (next[key]) { skipped++; continue; }
+      const ll = p.lon != null && p.lat != null ? [Number(p.lon), Number(p.lat)] : null;
+      delete p.region;
+      delete p.lat;
+      delete p.lon;
+      if (p.url && !/^https?:\/\//i.test(p.url)) delete p.url;
+      p.edited_fields = Object.fromEntries(["stories", "heating", "cooling"]
+        .filter(field => p[field] != null).map(field => [field, p[field]]));
+      const location = current?.ll ?? (validWatchLocation(ll) ? ll : null);
+      next[key] = watchSnapshot(current?.p ?? p, location, p);
+      added++;
+      if (!location) unmapped++;
+    }
+    if (added && !saveWatchlist(next)) throw new Error("This browser could not save the imported homes.");
+    status.textContent = `Imported ${added}. Skipped ${skipped} duplicates or incomplete rows.`
+      + (unmapped ? ` ${unmapped} saved without a map location.` : "");
+    if (added) enrichWatchlist();
+  } catch (err) {
+    status.textContent = err.message || "Could not read that watchlist CSV.";
+  }
+});
+
 $("watchlist-export").addEventListener("click", async () => {
   await enrichWatchlist();
   const cell = value => {
@@ -2592,8 +2762,8 @@ $("watchlist-export").addEventListener("click", async () => {
     if (typeof value === "string" && /^[\s]*[=+@-]/.test(s)) s = "'" + s;
     return '"' + s.replaceAll('"', '""') + '"';
   };
-  const rows = [Object.values(watchFields), ...sortedWatchEntries()
-    .map(([, p]) => Object.keys(watchFields).map(key => p[key]))];
+  const rows = [[...Object.values(watchFields), "Latitude", "Longitude"], ...sortedWatchEntries()
+    .map(([, p]) => [...Object.keys(watchFields).map(key => p[key]), p.ll?.[1], p.ll?.[0]])];
   const url = URL.createObjectURL(new Blob(["\ufeff", rows.map(r => r.map(cell).join(",")).join("\r\n")],
     { type: "text/csv;charset=utf-8" }));
   const a = document.createElement("a");
