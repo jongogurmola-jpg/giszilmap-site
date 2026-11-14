@@ -207,3 +207,6 @@ select { width: 100%; padding: 5px; font-size: 13px; }
 .demo-bar i { display: block; height: 100%; }
 .dim { color: #898781; font-size: 11px; }
 .sch-links { margin: 3px 0 2px; font-size: 12px; }
+
+.transit-route-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin: 6px 0; }
+.transit-route-row button { flex-shrink: 0; cursor: pointer; }

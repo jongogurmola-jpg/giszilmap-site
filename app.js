@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "f650162f73";  // replaced with the publish timestamp by publish.sh
+const BUILD = "0c817848f8";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -249,6 +249,7 @@ const OVERLAYS = [
   { id: "food",      label: "Bakeries & specialty food", color: "#c58b3a", on: false },
   { id: "colleges",  label: "Colleges & universities", color: "#7a1f3d", on: false },
   { id: "marinas",   label: "Marinas & boat slips", color: "#167c9a", on: false },
+  { id: "transit",   label: "Bus stops & train stations", color: "#216b93", on: false },
   { id: "worship",   label: "Places of worship",  color: "#4a3aa7", on: false },
   { id: "stripclubs", label: "Strip clubs",         color: "#0b0b0b", on: false },
   { id: "housing",    label: "Public & subsidized housing", color: "#b5178a", on: false },
@@ -582,6 +583,7 @@ map.on("load", async () => {
     },
   });
 
+  addTransitLayers();
   map.addSource("marinas", { type: "geojson", data: EMPTY_FC });
   map.addLayer({
     id: "marinas", type: "circle", source: "marinas", minzoom: 8,
@@ -1102,6 +1104,12 @@ function applySchoolFilter() {
 function applyOverlays() {
   for (const o of OVERLAYS) {
     const vis = o.on ? "visible" : "none";
+    if (o.id === "transit") {
+      if (o.on) loadTransit();
+      for (const layer of ["transit-rail", "transit-bus", "transit-lines"])
+        map.setLayoutProperty(layer, "visibility", vis);
+      continue;
+    }
     if (o.on) ensureSource(o.id);
     if (o.id === "racedots") {
       const yr = $("dotyear").value;
@@ -2082,6 +2090,11 @@ function wirePopups() {
         + `${p.address ? `<br><span class="dim">${p.address}</span>` : ""}`
         + `${p.hours ? `<br><span class="dim">${p.hours}</span>` : ""}${fsqLine(p)}${web}`).addTo(map);
     }
+    const stops = tryLayers(["transit-rail", "transit-bus"]);
+    if (stops.length) return popupTransitStop(stops);
+    const lines = tryLayers(["transit-lines"]);
+    if (lines.length) return popupTransit(e.lngLat, "Displayed transit routes",
+      lines.map(f => f.properties.id));
     feats = tryLayers(["marinas"]);
     if (feats.length && map.getLayoutProperty("marinas", "visibility") === "visible")
       return popupMarina(e.lngLat, feats[0].properties, feats[0].geometry.coordinates);
@@ -2126,8 +2139,93 @@ function wirePopups() {
       return popupScorecard(e.lngLat, props);
     }
   });
-  for (const id of ["personal-watchlist", "watch", "listings", "listings-sq", "schools", "food", "marinas", "colleges", "sold", "grocery", "amenities", "worship", "housing", "traffic", "speed", "bg-fill"])
+  for (const id of ["transit-rail", "transit-bus", "transit-lines", "personal-watchlist", "watch", "listings", "listings-sq", "schools", "food", "marinas", "colleges", "sold", "grocery", "amenities", "worship", "housing", "traffic", "speed", "bg-fill"])
     map.on("mouseenter", id, () => map.getCanvas().style.cursor = "pointer");
+}
+
+const transitRoutes = new Map();
+const shownTransitRoutes = new Set();
+let transitLoad;
+
+function addTransitLayers() {
+  map.addSource("transit-stops", { type: "geojson", data: EMPTY_FC });
+  map.addSource("transit-lines", { type: "geojson", data: EMPTY_FC });
+  map.addLayer({ id: "transit-lines", type: "line", source: "transit-lines",
+    layout: { "line-join": "round", "line-cap": "round" },
+    paint: { "line-color": ["get", "color"], "line-opacity": 0.85,
+      "line-width": ["match", ["get", "mode"], "rail", 5, 3] } });
+  for (const mode of ["bus", "rail"]) {
+    map.addLayer({ id: "transit-" + mode, type: "circle", source: "transit-stops",
+      minzoom: mode === "bus" ? 13 : 9,
+      filter: ["==", ["get", "mode"], mode],
+      paint: { "circle-radius": mode === "bus" ? 4 : 7,
+        "circle-color": mode === "bus" ? "#216b93" : "#732185",
+        "circle-stroke-color": "#fff", "circle-stroke-width": 1.5 } });
+  }
+}
+
+function loadTransit() {
+  const read = async name => {
+    const response = await fetch(tile(name + ".geojson"));
+    if (!response.ok) throw new Error(name + " HTTP " + response.status);
+    return response.json();
+  };
+  transitLoad ??= Promise.all([read("transit_stops"), read("transit_routes")])
+    .then(([stops, routes]) => {
+      for (const feature of routes.features) transitRoutes.set(feature.properties.id, feature);
+      map.getSource("transit-stops").setData(stops);
+    }).catch(err => {
+      transitLoad = null;
+      toast("Transit data could not load. Toggle the layer to retry.");
+      console.warn(err);
+    });
+}
+
+function popupTransitStop(features) {
+  const first = features[0];
+  const nearby = features.filter(f => f.properties.name === first.properties.name
+    || f.geometry.coordinates.every((value, i) => value === first.geometry.coordinates[i]));
+  const ids = nearby.flatMap(f => {
+    const routes = f.properties.routes;
+    return Array.isArray(routes) ? routes : JSON.parse(routes);
+  });
+  return popupTransit(first.geometry.coordinates, first.properties.name, ids);
+}
+
+function popupTransit(lngLat, title, ids) {
+  const box = document.createElement("div");
+  const heading = document.createElement("h3");
+  heading.textContent = title;
+  box.append(heading);
+  const popup = new maplibregl.Popup({ maxWidth: "320px" }).setLngLat(lngLat).setDOMContent(box);
+  const routes = [...new Set(ids)].map(id => transitRoutes.get(id)?.properties)
+    .filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  for (const route of routes) {
+    const row = document.createElement("div");
+    row.className = "transit-route-row";
+    const label = document.createElement("span");
+    label.textContent = `${route.name} · ${route.agency} · ${route.mode === "rail" ? "Train" : "Bus"}`;
+    if (route.feed_end && route.feed_end < new Date().toISOString().slice(0, 10))
+      label.append(document.createElement("br"), `Feed ended ${route.feed_end}`);
+    const button = document.createElement("button");
+    button.type = "button";
+    const updateButton = () => {
+      const shown = shownTransitRoutes.has(route.id);
+      button.textContent = shown ? "Hide line" : "Show line";
+      button.setAttribute("aria-pressed", String(shown));
+    };
+    button.onclick = () => {
+      if (shownTransitRoutes.has(route.id)) shownTransitRoutes.delete(route.id);
+      else shownTransitRoutes.add(route.id);
+      map.getSource("transit-lines").setData({ type: "FeatureCollection",
+        features: [...shownTransitRoutes].map(id => transitRoutes.get(id)) });
+      updateButton();
+    };
+    updateButton();
+    row.append(label, button);
+    box.append(row);
+  }
+  return popup.addTo(map);
 }
 
 function popupMarina(lngLat, p, coords) {
