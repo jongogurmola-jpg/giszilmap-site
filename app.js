@@ -2,7 +2,7 @@
 "use strict";
 
 const GLENN = [-81.8622, 41.4155];
-const BUILD = "0c817848f8";  // replaced with the publish timestamp by publish.sh
+const BUILD = "e6a29aa819";  // replaced with the publish timestamp by publish.sh
 // dev-mode cache buster: browsers heuristically cache fetch() results even
 // across hard reloads; a unique query forces fresh data on every local load
 const DEVQ = BUILD === "dev" ? "?t=" + Date.now() : "";
@@ -1366,12 +1366,15 @@ function buildListingFilters() {
       : ["any", flag("new_since_last"), flag("chg_since_last"), flag("uc_since_last")]);
   } else if (age) {
     const days = +age.slice(1);
+    const listingAge = ["get", "days_since_listing_start"];
     // "price change" mode filters on days since the last price change this
     // tool observed; listings with no observed change are excluded. "either"
     // = listed OR price-changed within the window ("newer than"), and so its
     // "older than" is the complement: listed that long ago and not changed since.
-    const newer = (field) => ["<=", ["coalesce", ["get", field], 99999], days];
-    const older = (field) => [">=", ["coalesce", ["get", field], -1], days];
+    const ageValue = field => field === "days_on_market"
+      ? [listingAge, ["get", field]] : [["get", field]];
+    const newer = (field) => ["<=", ["coalesce", ...ageValue(field), 99999], days];
+    const older = (field) => [">=", ["coalesce", ...ageValue(field), -1], days];
     const mode = $("agemode").value;
     if (mode === "either")
       f.push(age[0] === "n"
@@ -1652,7 +1655,7 @@ function marketInsights() {
   const ex = pick(active, p => p.excess_pct);
   const band = p => p.local_mae_pct ?? p.model_mae_pct ?? 6;
   const exUnder = ex.filter(it => it.v < -band(it.p)).length, exOver = ex.filter(it => it.v > band(it.p)).length;
-  const newWeek = active.filter(r => r.p.days_on_market != null && r.p.days_on_market <= 7).length;
+  const newWeek = active.filter(({ p }) => (p.days_since_listing_start ?? p.days_on_market ?? Infinity) <= 7).length;
   const perMonth = S.length / soldwin * 30.4;
   const supply = perMonth > 0 ? active.length / perMonth : null;
 
@@ -2923,6 +2926,8 @@ function popupListing(lngLat, p) {
     ${p.status !== "sold" && p.days_to_pending != null ? `<br>under contract after ${fmt(p.days_to_pending)} days` : ""}
     ${p.price_changed ? `<br><b style="color:${p.price_change_pct < 0 ? "#006300" : "#d03b3b"}">${p.price_change_pct < 0 ? "▼" : "▲"} ${Math.abs(p.price_change_pct)}%</b> on ${p.price_changed}` : ""}
     ${+p.new_since_last === 1 ? `<br><b style="color:#4a3aa7">new since the last refresh</b>` : ""}
+    ${p.days_since_listing_start > p.days_on_market && p.days_on_market != null
+      ? `<br>${fmt(p.days_since_listing_start)} days since the listing first appeared (including relists)` : ""}
     ${+p.chg_since_last === 1 && p.prev_price ? `<br><b>price changed since the last refresh</b> (was ${money(p.prev_price)})` : ""}
     ${+p.uc_since_last === 1 ? `<br><b style="color:${PENDING_COLOR}">went under contract since the last refresh</b>` : ""}<br>
     <a href="${p.url}" target="_blank" rel="noopener noreferrer">listing ↗ (${p.source})</a>
