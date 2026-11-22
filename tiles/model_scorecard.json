@@ -25,7 +25,7 @@
   "r2_log": 0.7676,
   "median_abs_err_pct": 6.8,
   "mean_abs_err_pct": 8.76,
-  "scored_active": 2016,
+  "scored_active": 2015,
   "ppsf_factor": {
    "<150": 1.448,
    "150-190": 0.909,
@@ -84,7 +84,7 @@
     "r2_log": 0.2135,
     "median_abs_err_pct": 6.33,
     "mean_abs_err_pct": 7.66,
-    "scored_active": 236,
+    "scored_active": 235,
     "ppsf_factor": {
      "150-190": 1.0,
      "190-240": 1.0,
@@ -104,5 +104,5 @@
    }
   }
  },
- "written": "2026-11-22 00:30"
+ "written": "2026-11-22 06:32"
 }
