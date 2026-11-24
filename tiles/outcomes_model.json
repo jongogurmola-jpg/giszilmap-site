@@ -1,24 +1,24 @@
 {
-  "asof": "2026-11-24 00:43:00",
+  "asof": "2026-11-24 06:34:00",
   "horizon_days": 7,
-  "scored_active": 6894,
+  "scored_active": 6906,
   "sale_to_list": {
-    "n_train": 4516,
-    "n_test": 1964,
-    "mae_model_pp": 3.73,
-    "mae_dom_only_pp": 3.88,
-    "mae_predict_median_pp": 4.11,
+    "n_train": 4503,
+    "n_test": 1994,
+    "mae_model_pp": 3.7,
+    "mae_dom_only_pp": 3.86,
+    "mae_predict_median_pp": 4.07,
     "auc_sells_above_asking": 0.799,
-    "auc_dom_only": 0.762,
-    "auc_day_one_no_timing": 0.654,
-    "band_coverage_raw": 0.51,
-    "band_widened_by_pp": 0.58,
+    "auc_dom_only": 0.76,
+    "auc_day_one_no_timing": 0.647,
+    "band_coverage_raw": 0.513,
+    "band_widened_by_pp": 0.59,
     "band_coverage_widened": 0.6
   },
   "p_cut": {
     "listing_days": 539428,
     "listings": 16258,
-    "base_rate": 0.1154,
+    "base_rate": 0.1155,
     "auc": 0.678,
     "auc_dom_only": 0.614,
     "brier": 0.098,
@@ -27,15 +27,15 @@
     "calibration": [
       [
         0.034,
-        0.037
+        0.036
       ],
       [
-        0.073,
-        0.072
+        0.072,
+        0.075
       ],
       [
         0.106,
-        0.107
+        0.106
       ],
       [
         0.147,
@@ -43,7 +43,7 @@
       ],
       [
         0.219,
-        0.215
+        0.214
       ]
     ]
   },
@@ -51,30 +51,30 @@
     "listing_days": 539428,
     "listings": 16258,
     "base_rate": 0.0921,
-    "auc": 0.743,
+    "auc": 0.742,
     "auc_dom_only": 0.68,
     "brier": 0.0771,
     "brier_base_rate": 0.0836,
-    "rate_in_top_decile": 0.284,
+    "rate_in_top_decile": 0.287,
     "calibration": [
       [
         0.019,
-        0.016
+        0.018
       ],
       [
         0.045,
-        0.042
+        0.043
       ],
       [
-        0.076,
-        0.073
+        0.075,
+        0.072
       ],
       [
         0.118,
-        0.106
+        0.105
       ],
       [
-        0.241,
+        0.243,
         0.223
       ]
     ]
